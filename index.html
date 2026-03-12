@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitoreo Agentes — Naty</title>
+
+<!--
+  ============================================================
+  DASHBOARD DE MONITOREO — NATY AGENTES
+  ============================================================
+  Página web estática que se conecta directamente a Supabase
+  para leer el estado de los agentes en tiempo real.
+
+  FLUJO DE DATOS:
+    n8n (cada 1 min) → Supabase naty_logs → Esta página (cada 15s)
+
+  ESTRUCTURA DEL ARCHIVO:
+    1. <style>  — Estilos visuales del dashboard
+    2. <body>   — Estructura HTML de los paneles
+    3. <script> — Lógica de conexión y actualización de datos
+
+  TABLA EN SUPABASE (naty_logs):
+    id_agente                   — ID único del agente en Chatwoot
+    nombre                      — Nombre del agente
+    estado                      — 'online' | 'offline'
+    ultima_conexion             — Timestamp de cuando se desconectó
+    tiempo_desconectado_minutos — Minutos acumulados offline
+    ultimo_chequeo              — Última vez que n8n procesó este agente
+  ============================================================
+-->
+
+<style>
+  /* ── Reset básico ─────────────────────────────────────────
+     Elimina márgenes y paddings por defecto del navegador.
+  ───────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Fondo y tipografía global ────────────────────────────
+     Fondo oscuro #0d1117. Texto principal blanco suave.
+  ───────────────────────────────────────────────────────── */
+  body {
+    background: #0d1117;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #e6edf3;
+    min-height: 100vh;
+    padding: 28px 32px;
+  }
+
+  /* ── Header ───────────────────────────────────────────────
+     Barra superior: título + reloj + última actualización.
+  ───────────────────────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 0.5px solid #30363d;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 14px; }
+
+  /* Punto verde animado — indica que el sistema está activo */
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #3fb950;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 6px #3fb95088; }
+    50%       { box-shadow: 0 0 16px #3fb950cc; }
+  }
+
+  header h1 { font-size: 22px; font-weight: 500; letter-spacing: 0.3px; }
+  .header-right { display: flex; align-items: center; gap: 20px; }
+
+  #clock {
+    font-size: 15px;
+    color: #8b949e;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #last-update { font-size: 13px; color: #484f58; }
+
+  /* ── Tarjetas de contadores ───────────────────────────────
+     Grid de 3 columnas: Online | Offline | Mayor tiempo offline
+  ───────────────────────────────────────────────────────── */
+  .counters {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .counter-card {
+    border-radius: 14px;
+    padding: 22px 26px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    transition: transform 0.2s;
+  }
+
+  .counter-card:hover { transform: translateY(-2px); }
+  .counter-card.online  { background: #0f2a1a; border: 0.5px solid #1e4d2f; }
+  .counter-card.offline { background: #2a0f0f; border: 0.5px solid #4a1f1f; }
+  .counter-card.top     { background: #0f1a2a; border: 0.5px solid #1f3a5a; }
+
+  .counter-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+
+  .counter-icon.green { background: #1a4731; }
+  .counter-icon.red   { background: #4a1f1f; }
+  .counter-icon.blue  { background: #1f3a5a; }
+  .counter-info { flex: 1; }
+
+  .counter-label {
+    font-size: 11px; color: #8b949e;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+  }
+
+  .counter-value {
+    font-size: 38px; font-weight: 600;
+    line-height: 1; transition: all 0.4s;
+  }
+
+  .counter-value.green { color: #3fb950; }
+  .counter-value.red   { color: #f85149; }
+  .counter-value.blue  { color: #58a6ff; font-size: 20px; line-height: 1.3; }
+  .counter-sub { font-size: 12px; color: #484f58; margin-top: 5px; }
+
+  /* ── Panel de último cambio ───────────────────────────────
+     Recuadro grande que muestra el último agente que cambió
+     de estado. La barra lateral y el ícono cambian de color:
+       Verde → el agente se reconectó (offline → online)
+       Rojo  → el agente se desconectó (online → offline)
+  ───────────────────────────────────────────────────────── */
+  .last-change-wrap {
+    background: #161b22;
+    border-radius: 14px;
+    border: 0.5px solid #30363d;
+    padding: 24px 32px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-height: 110px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Barra de acento izquierda — color cambia según tipo de cambio */
+  .last-change-accent {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 14px 0 0 14px;
+    transition: background 0.5s;
+  }
+
+  .last-change-icon {
+    width: 60px; height: 60px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; flex-shrink: 0;
+    transition: background 0.5s;
+  }
+
+  .last-change-info { flex: 1; }
+
+  .last-change-label {
+    font-size: 11px; color: #484f58;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+  }
+
+  /* Nombre del agente — tamaño grande para TV */
+  .last-change-name {
+    font-size: 30px; font-weight: 700;
+    color: #ffffff; letter-spacing: 0.3px; margin-bottom: 6px;
+  }
+
+  .last-change-detail { font-size: 15px; color: #8b949e; }
+
+  .last-change-time { text-align: right; flex-shrink: 0; }
+
+  .last-change-time .time-label {
+    font-size: 11px; color: #484f58;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+  }
+
+  .last-change-time .time-value {
+    font-size: 24px; font-weight: 600;
+    color: #e6edf3; font-variant-numeric: tabular-nums;
+  }
+
+  /* Flash de atención cuando se detecta un nuevo cambio */
+  @keyframes flashChange {
+    0%   { background: #1f2d3d; border-color: #2d4a6a; }
+    100% { background: #161b22; border-color: #30363d; }
+  }
+
+  .last-change-wrap.new-change {
+    animation: flashChange 2s ease;
+  }
+
+  /* ── Tabla principal ──────────────────────────────────────
+     Lista completa: online primero, luego offline por tiempo.
+  ───────────────────────────────────────────────────────── */
+  .table-wrap {
+    background: #161b22;
+    border-radius: 14px;
+    border: 0.5px solid #30363d;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .table-header {
+    padding: 16px 24px;
+    border-bottom: 0.5px solid #21262d;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .table-header-left { display: flex; align-items: center; gap: 10px; }
+  .table-title { font-size: 14px; font-weight: 500; color: #e6edf3; }
+
+  .badge {
+    font-size: 11px; padding: 3px 10px;
+    border-radius: 20px; background: #21262d;
+    color: #8b949e; border: 0.5px solid #30363d;
+  }
+
+  /* Punto que parpadea brevemente en cada actualización */
+  .refresh-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #484f58; }
+
+  .refresh-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #3fb950; opacity: 0; transition: opacity 0.3s;
+  }
+
+  .refresh-dot.active { opacity: 1; }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  th {
+    padding: 10px 24px; text-align: left;
+    font-size: 11px; font-weight: 500; color: #484f58;
+    text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 0.5px solid #21262d;
+  }
+
+  td {
+    padding: 16px 24px; font-size: 15px;
+    border-bottom: 0.5px solid #161b22; transition: background 0.3s;
+  }
+
+  tbody tr { transition: background 0.2s; animation: fadeIn 0.4s ease; }
+  tbody tr:hover td { background: #1c2128; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Nombre del agente — grande y visible para TV */
+  .agent-name { font-weight: 600; font-size: 18px; color: #ffffff; letter-spacing: 0.2px; }
+
+  .status-pill {
+    display: inline-flex; align-items: center;
+    gap: 7px; padding: 5px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 500; letter-spacing: 0.5px;
+  }
+
+  .status-pill.online  { background: #0f2a1a; color: #3fb950; border: 0.5px solid #1e4d2f; }
+  .status-pill.offline { background: #2a0f0f; color: #f85149; border: 0.5px solid #4a1f1f; }
+
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  .status-dot.green {
+    background: #3fb950;
+    box-shadow: 0 0 6px #3fb95088;
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.red { background: #f85149; }
+
+  /* Texto de minutos — monospace para alinear bien los números */
+  .mins { font-family: 'Courier New', monospace; font-size: 14px; font-weight: 500; }
+  .mins.high { color: #f85149; } /* >= 800 min — crítico  */
+  .mins.mid  { color: #d29922; } /* >= 100 min — alerta   */
+  .mins.low  { color: #484f58; } /* <  100 min — normal   */
+
+  /* Barra proporcional al tiempo offline del agente */
+  .bar-wrap { display: flex; align-items: center; gap: 10px; }
+
+  .bar-bg {
+    flex: 1; height: 5px; background: #21262d;
+    border-radius: 3px; max-width: 160px; overflow: hidden;
+  }
+
+  /* Ancho calculado en JS: (mins / maxMins) * 100% */
+  .bar-fill { height: 5px; border-radius: 3px; transition: width 0.8s ease; }
+
+  /* ── Loading y error ──────────────────────────────────────*/
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    padding: 60px; color: #484f58; font-size: 14px; gap: 12px;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid #21262d; border-top-color: #58a6ff;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { padding: 24px; text-align: center; color: #f85149; font-size: 14px; }
+
+  /* Highlight azul cuando un contador cambia de valor */
+  @keyframes highlight {
+    0%   { background: #1f3a5a; }
+    100% { background: transparent; }
+  }
+
+  .changed { animation: highlight 1.5s ease; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     HEADER — título + reloj + última actualización
+════════════════════════════════════════════════════════ -->
+<header>
+  <div class="header-left">
+    <div class="logo-dot"></div>
+    <h1>Monitoreo de agentes — Naty</h1>
+  </div>
+  <div class="header-right">
+    <span id="last-update">Cargando...</span>
+    <span id="clock"></span>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════
+     CONTADORES — Online | Offline | Mayor tiempo offline
+     Valores inyectados por fetchData() en cada ciclo.
+════════════════════════════════════════════════════════ -->
+<div class="counters">
+  <div class="counter-card online">
+    <div class="counter-icon green">🟢</div>
+    <div class="counter-info">
+      <div class="counter-label">Agentes online</div>
+      <div class="counter-value green" id="count-online">—</div>
+      <div class="counter-sub">Activos ahora</div>
+    </div>
+  </div>
+  <div class="counter-card offline">
+    <div class="counter-icon red">🔴</div>
+    <div class="counter-info">
+      <div class="counter-label">Agentes offline</div>
+      <div class="counter-value red" id="count-offline">—</div>
+      <div class="counter-sub">Fuera de línea</div>
+    </div>
+  </div>
+  <div class="counter-card top">
+    <div class="counter-icon blue">⏱</div>
+    <div class="counter-info">
+      <div class="counter-label">Mayor tiempo offline</div>
+      <div class="counter-value blue" id="top-offline">—</div>
+      <div class="counter-sub" id="top-offline-mins"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ÚLTIMO CAMBIO DETECTADO
+     Recuadro grande visible en TV. Muestra el último agente
+     que cambió de estado con nombre grande, descripción y hora.
+     La barra izquierda y el ícono cambian de color automáticamente:
+       Rojo  → se desconectó
+       Verde → se reconectó
+     Se actualiza cada vez que fetchData() detecta un cambio.
+════════════════════════════════════════════════════════ -->
+<div class="last-change-wrap" id="last-change-wrap">
+  <div class="last-change-accent" id="last-change-accent" style="background:#30363d;"></div>
+  <div class="last-change-icon" id="last-change-icon" style="background:#21262d;">
+    <span id="last-change-emoji">⏳</span>
+  </div>
+  <div class="last-change-info">
+    <div class="last-change-label">Último cambio detectado</div>
+    <div class="last-change-name" id="last-change-name">Esperando primer cambio...</div>
+    <div class="last-change-detail" id="last-change-detail">El panel se actualizará al detectar un cambio de estado</div>
+  </div>
+  <div class="last-change-time">
+    <div class="time-label">Hora del cambio</div>
+    <div class="time-value" id="last-change-time">—</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TABLA DE AGENTES
+     Online primero, luego offline ordenados por mayor tiempo.
+     Columnas: Nombre | Estado | Tiempo offline | Barra visual
+════════════════════════════════════════════════════════ -->
+<div class="table-wrap">
+  <div class="table-header">
+    <div class="table-header-left">
+      <span class="table-title">Estado de agentes</span>
+      <span class="badge" id="total-badge">— agentes</span>
+    </div>
+    <div class="refresh-indicator">
+      <div class="refresh-dot" id="refresh-dot"></div>
+      <span>Actualización cada 15s</span>
+    </div>
+  </div>
+  <div id="table-container">
+    <div class="loading">
+      <div class="spinner"></div>
+      Cargando datos...
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     DB CRUDA (colapsable)
+     Tabla técnica con todos los campos de naty_logs.
+     Solo carga datos cuando se expande.
+════════════════════════════════════════════════════════ -->
+<div style="margin-top:8px; padding-bottom:32px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:14px; font-weight:500; color:#e6edf3;">Base de datos cruda</span>
+      <span style="font-size:11px; padding:3px 10px; border-radius:20px; background:#21262d; color:#8b949e; border:0.5px solid #30363d;">naty_logs</span>
+    </div>
+    <button onclick="toggleRaw()" id="raw-toggle"
+      style="font-size:12px; padding:5px 14px; border-radius:8px; background:#21262d; color:#8b949e; border:0.5px solid #30363d; cursor:pointer;">
+      Mostrar
+    </button>
+  </div>
+  <div id="raw-section" style="display:none; background:#161b22; border-radius:14px; border:0.5px solid #30363d; overflow:hidden;">
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:12px; font-family:'Courier New',monospace;">
+        <thead>
+          <tr style="background:#0d1117;">
+            <th style="padding:10px 16px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d;">id_agente</th>
+            <th style="padding:10px 16px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d;">nombre</th>
+            <th style="padding:10px 16px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d;">estado</th>
+            <th style="padding:10px 16px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d;">ultima_conexion</th>
+            <th style="padding:10px 16px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d;">tiempo_desconectado_minutos</th>
+            <th style="padding:10px 16px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d;">ultimo_chequeo</th>
+          </tr>
+        </thead>
+        <tbody id="raw-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════ -->
+<script>
+
+  /* ── Credenciales Supabase ────────────────────────────────
+     URL del proyecto y clave anon (solo lectura pública).
+     NUNCA usar service_role key en el frontend.
+  ───────────────────────────────────────────────────────── */
+  const SUPABASE_URL = 'https://yzhlaypunmtfokbblpxt.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6aGxheXB1bm10Zm9rYmJscHh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNDkyMTYsImV4cCI6MjA4ODgyNTIxNn0.CSK39wZBY7hgLByD5RK92jFc6QzoBHSzLN3EpdPPo3o';
+
+  /* ── Estado en memoria ────────────────────────────────────
+     Guardamos el estado anterior de cada agente para detectar
+     cambios entre ciclos de actualización.
+     Formato: { id_agente: 'online' | 'offline' }
+  ───────────────────────────────────────────────────────── */
+  let previousStates = {};
+
+  /* Máximo de minutos offline — para escalar las barras al 100% */
+  let maxMins = 1;
+
+
+  /* ── Reloj en tiempo real ─────────────────────────────────
+     Actualiza #clock cada segundo.
+  ───────────────────────────────────────────────────────── */
+  function clock() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  setInterval(clock, 1000);
+  clock();
+
+
+  /* ── Animar cambio de valor ───────────────────────────────
+     Actualiza el texto de un elemento y dispara highlight
+     CSS si el valor cambió.
+  ───────────────────────────────────────────────────────── */
+  function animateValue(el, newVal) {
+    if (el.textContent !== String(newVal)) {
+      el.textContent = newVal;
+      el.classList.remove('changed');
+      void el.offsetWidth; // fuerza reflow para reiniciar animación
+      el.classList.add('changed');
+    }
+  }
+
+
+  /* ── Clase CSS de urgencia por minutos ───────────────────
+     >= 800 → high (rojo crítico)
+     >= 100 → mid  (amarillo alerta)
+     <  100 → low  (gris normal)
+  ───────────────────────────────────────────────────────── */
+  function minsColor(mins) {
+    if (mins >= 800) return 'high';
+    if (mins >= 100) return 'mid';
+    return 'low';
+  }
+
+
+  /* ── Color hex de la barra proporcional ──────────────────
+     Misma lógica que minsColor pero retorna hex para inline style.
+  ───────────────────────────────────────────────────────── */
+  function barColor(mins) {
+    if (mins >= 800) return '#f85149';
+    if (mins >= 100) return '#d29922';
+    return '#484f58';
+  }
+
+
+  /* ── Formatear minutos a texto legible ───────────────────
+     0   → '—'
+     45  → '45 min'
+     90  → '1h 30m'
+     120 → '2h'
+  ───────────────────────────────────────────────────────── */
+  function formatMins(mins) {
+    if (!mins || mins === 0) return '—';
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    return `${mins} min`;
+  }
+
+
+  /* ── Actualizar panel de último cambio ───────────────────
+     Recibe el agente que cambió y el tipo de evento.
+     Actualiza el recuadro grande con nombre, descripción,
+     hora y colores según si se conectó o desconectó.
+
+     Parámetros:
+       agent — objeto del agente { nombre, estado, ... }
+       type  — 'went_offline' | 'came_online'
+  ───────────────────────────────────────────────────────── */
+  function updateLastChange(agent, type) {
+    const isOffline = type === 'went_offline';
+    const color     = isOffline ? '#f85149' : '#3fb950';
+    const bgIcon    = isOffline ? '#4a1f1f' : '#1a4731';
+
+    document.getElementById('last-change-accent').style.background = color;
+    document.getElementById('last-change-icon').style.background   = bgIcon;
+    document.getElementById('last-change-emoji').textContent       = isOffline ? '🔴' : '🟢';
+    document.getElementById('last-change-name').textContent        = agent.nombre;
+
+    const detail = document.getElementById('last-change-detail');
+    detail.textContent  = isOffline ? 'Se desconectó — pasó a offline' : 'Se reconectó — volvió a online';
+    detail.style.color  = color;
+
+    document.getElementById('last-change-time').textContent = new Date().toLocaleTimeString('es-HN');
+
+    // Flash de atención para llamar la atención en el TV
+    const wrap = document.getElementById('last-change-wrap');
+    wrap.classList.remove('new-change');
+    void wrap.offsetWidth;
+    wrap.classList.add('new-change');
+  }
+
+
+  /* ── Fetch principal ──────────────────────────────────────
+     Consulta naty_logs en Supabase y actualiza toda la UI.
+
+     Orden de la query:
+       estado.desc              → 'online' antes que 'offline'
+       tiempo_desconectado.desc → offline más largo primero
+
+     Flujo interno:
+       1. Llama a la API REST de Supabase
+       2. Compara estados actuales vs previousStates
+       3. Si hay cambio → llama updateLastChange()
+       4. Actualiza contadores y tabla
+       5. Guarda estados para próxima comparación
+  ───────────────────────────────────────────────────────── */
+  async function fetchData() {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/naty_logs?select=*&order=estado.desc,tiempo_desconectado_minutos.desc`,
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+      );
+
+      if (!res.ok) throw new Error('Error al conectar con Supabase');
+
+      const data = await res.json();
+
+      // Parpadeo del indicador de refresco
+      const dot = document.getElementById('refresh-dot');
+      dot.classList.add('active');
+      setTimeout(() => dot.classList.remove('active'), 800);
+
+      // Detectar cambios vs estado anterior (solo el primero por ciclo)
+      let changeDetected = false;
+      for (const agent of data) {
+        const prev = previousStates[agent.id_agente];
+        if (prev && prev !== agent.estado && !changeDetected) {
+          updateLastChange(agent, agent.estado === 'offline' ? 'went_offline' : 'came_online');
+          changeDetected = true;
+        }
+      }
+
+      // Guardar estados actuales para el próximo ciclo
+      for (const agent of data) {
+        previousStates[agent.id_agente] = agent.estado;
+      }
+
+      // Actualizar contadores superiores
+      const onlineCount  = data.filter(a => a.estado === 'online').length;
+      const offlineCount = data.filter(a => a.estado === 'offline').length;
+      const topAgent     = data.find(a => a.estado === 'offline');
+
+      animateValue(document.getElementById('count-online'),  onlineCount);
+      animateValue(document.getElementById('count-offline'), offlineCount);
+
+      if (topAgent) {
+        document.getElementById('top-offline').textContent      = topAgent.nombre;
+        document.getElementById('top-offline-mins').textContent = formatMins(topAgent.tiempo_desconectado_minutos);
+      } else {
+        document.getElementById('top-offline').textContent      = 'Todos online';
+        document.getElementById('top-offline-mins').textContent = '';
+      }
+
+      document.getElementById('total-badge').textContent  = `${data.length} agentes`;
+      document.getElementById('last-update').textContent  = `Última actualización: ${new Date().toLocaleTimeString('es-HN')}`;
+
+      // Máximo para escalar barras (el mayor tiene barra al 100%)
+      maxMins = Math.max(1, ...data.map(a => a.tiempo_desconectado_minutos || 0));
+
+      // Renderizar filas de la tabla
+      const rows = data.map(agent => {
+        const isOnline = agent.estado === 'online';
+        const mins     = agent.tiempo_desconectado_minutos || 0;
+        const pct      = isOnline ? 0 : Math.round((mins / maxMins) * 100);
+
+        return `<tr>
+          <td class="agent-name">${agent.nombre}</td>
+          <td>
+            <span class="status-pill ${isOnline ? 'online' : 'offline'}">
+              <span class="status-dot ${isOnline ? 'green' : 'red'}"></span>
+              ${isOnline ? 'Online' : 'Offline'}
+            </span>
+          </td>
+          <td>
+            <span class="mins ${isOnline ? 'low' : minsColor(mins)}">
+              ${isOnline ? '—' : formatMins(mins)}
+            </span>
+          </td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar-bg">
+                <div class="bar-fill" style="width:${pct}%; background:${barColor(mins)};"></div>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('table-container').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Agente</th>
+              <th>Estado</th>
+              <th>Tiempo offline</th>
+              <th style="min-width:180px;"></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+
+    } catch (err) {
+      document.getElementById('table-container').innerHTML =
+        `<div class="error">Error al cargar datos: ${err.message}</div>`;
+    }
+  }
+
+  fetchData();                       // carga inmediata al abrir la página
+  setInterval(fetchData, 15000);     // luego cada 15 segundos
+
+
+  /* ── Toggle DB cruda ──────────────────────────────────────
+     Muestra u oculta la sección de base de datos cruda.
+     Solo llama a fetchRaw() al expandir para no hacer
+     requests innecesarios cuando está oculta.
+  ───────────────────────────────────────────────────────── */
+  function toggleRaw() {
+    const section = document.getElementById('raw-section');
+    const btn     = document.getElementById('raw-toggle');
+
+    if (section.style.display === 'none') {
+      section.style.display = 'block';
+      btn.textContent        = 'Ocultar';
+      btn.style.color        = '#58a6ff';
+      fetchRaw();
+    } else {
+      section.style.display = 'none';
+      btn.textContent        = 'Mostrar';
+      btn.style.color        = '#8b949e';
+    }
+  }
+
+
+  /* ── Fetch DB cruda ───────────────────────────────────────
+     Trae todos los campos de naty_logs ordenados por id.
+     Solo se ejecuta si la sección está visible.
+  ───────────────────────────────────────────────────────── */
+  async function fetchRaw() {
+    const tbody   = document.getElementById('raw-tbody');
+    const section = document.getElementById('raw-section');
+    if (!tbody || section.style.display === 'none') return;
+
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/naty_logs?select=*&order=id_agente.asc`,
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+      );
+      const data = await res.json();
+
+      tbody.innerHTML = data.map((r, i) => `
+        <tr style="border-bottom:0.5px solid #21262d; ${i % 2 === 0 ? 'background:#0d1117;' : ''}">
+          <td style="padding:8px 16px; color:#58a6ff;">${r.id_agente}</td>
+          <td style="padding:8px 16px; color:#e6edf3;">${r.nombre}</td>
+          <td style="padding:8px 16px; color:${r.estado === 'online' ? '#3fb950' : '#f85149'};">${r.estado}</td>
+          <td style="padding:8px 16px; color:#8b949e;">${r.ultima_conexion ?? '—'}</td>
+          <td style="padding:8px 16px; color:#d29922;">${r.tiempo_desconectado_minutos}</td>
+          <td style="padding:8px 16px; color:#8b949e;">${r.ultimo_chequeo ?? '—'}</td>
+        </tr>`).join('');
+
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:16px; color:#f85149; text-align:center;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  // Actualiza DB cruda cada 15s solo si está visible
+  setInterval(fetchRaw, 15000);
+
+</script>
+</body>
+</html>
