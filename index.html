@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitoreo Agentes — Naty</title>
+
+<!--
+  ============================================================
+  DASHBOARD DE MONITOREO — NATY AGENTES
+  ============================================================
+  Página web estática conectada a Supabase en tiempo real.
+
+  FLUJO DE DATOS:
+    n8n (cada 1 min):
+      → Chatwoot /agents       → Supabase naty_logs         (estado online/offline)
+      → Chatwoot /conversations → Supabase naty_conversations (chats por agente)
+
+  TABLAS EN SUPABASE:
+    naty_logs:
+      id_agente, nombre, estado, ultima_conexion,
+      tiempo_desconectado_minutos, ultimo_chequeo
+
+    naty_conversations:
+      id_agente, nombre, total_conversaciones, ultimo_chequeo
+
+  BREAKPOINTS RESPONSIVE:
+    Desktop  → > 768px  — layout completo
+    Tablet   → 481-768px — 2 columnas
+    Móvil    → ≤ 480px  — 1 columna, tabla compacta
+  ============================================================
+-->
+
+<style>
+  /* ── Reset ────────────────────────────────────────────────*/
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Base ─────────────────────────────────────────────────*/
+  body {
+    background: #0d1117;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #e6edf3;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  @media (min-width: 769px) {
+    body { padding: 28px 32px; }
+  }
+
+  /* ── Header ───────────────────────────────────────────────*/
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 0.5px solid #30363d;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 10px; }
+
+  .logo-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #3fb950;
+    flex-shrink: 0;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 6px #3fb95088; }
+    50%       { box-shadow: 0 0 16px #3fb950cc; }
+  }
+
+  header h1 { font-size: 17px; font-weight: 500; letter-spacing: 0.2px; }
+
+  @media (min-width: 769px) {
+    header h1 { font-size: 22px; }
+  }
+
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  #clock { font-size: 14px; color: #8b949e; font-variant-numeric: tabular-nums; }
+  #last-update { font-size: 12px; color: #484f58; }
+
+  /* ── Sección de contadores de chats (fila nueva) ──────────
+     4 tarjetas pequeñas: Total | Asignados | Sin asignar | —
+     Se muestran ENCIMA de los contadores de agentes.
+  ───────────────────────────────────────────────────────── */
+  .chat-counters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  @media (min-width: 769px) {
+    .chat-counters {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+  }
+
+  .chat-card {
+    background: #161b22;
+    border: 0.5px solid #30363d;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  @media (min-width: 769px) {
+    .chat-card { border-radius: 12px; padding: 14px 20px; }
+  }
+
+  .chat-card-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chat-card-icon.purple { background: #2d1f4a; }
+  .chat-card-icon.teal   { background: #0f2a2a; }
+  .chat-card-icon.amber  { background: #2a1f0f; }
+
+  .chat-card-info { flex: 1; min-width: 0; }
+
+  .chat-card-label {
+    font-size: 10px; color: #484f58;
+    text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px;
+  }
+
+  .chat-card-value {
+    font-size: 26px; font-weight: 700; line-height: 1;
+    transition: all 0.4s;
+  }
+
+  .chat-card-value.purple { color: #a371f7; }
+  .chat-card-value.teal   { color: #39d353; }
+  .chat-card-value.amber  { color: #d29922; }
+
+  /* ── Contadores de agentes (fila existente) ───────────────*/
+  .counters {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  @media (min-width: 481px) {
+    .counters { grid-template-columns: 1fr 1fr; }
+    .counter-card.top { grid-column: 1 / -1; }
+  }
+
+  @media (min-width: 769px) {
+    .counters { grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .counter-card.top { grid-column: auto; }
+  }
+
+  .counter-card {
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px;
+    transition: transform 0.2s;
+  }
+
+  @media (min-width: 769px) {
+    .counter-card { border-radius: 14px; padding: 22px 26px; gap: 18px; }
+  }
+
+  .counter-card:hover { transform: translateY(-2px); }
+  .counter-card.online  { background: #0f2a1a; border: 0.5px solid #1e4d2f; }
+  .counter-card.offline { background: #2a0f0f; border: 0.5px solid #4a1f1f; }
+  .counter-card.top     { background: #0f1a2a; border: 0.5px solid #1f3a5a; }
+
+  .counter-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+
+  @media (min-width: 769px) {
+    .counter-icon { width: 48px; height: 48px; font-size: 22px; }
+  }
+
+  .counter-icon.green { background: #1a4731; }
+  .counter-icon.red   { background: #4a1f1f; }
+  .counter-icon.blue  { background: #1f3a5a; }
+  .counter-info { flex: 1; min-width: 0; }
+
+  .counter-label {
+    font-size: 10px; color: #8b949e;
+    text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;
+  }
+
+  .counter-value { font-size: 32px; font-weight: 600; line-height: 1; transition: all 0.4s; }
+
+  @media (min-width: 769px) { .counter-value { font-size: 38px; } }
+
+  .counter-value.green { color: #3fb950; }
+  .counter-value.red   { color: #f85149; }
+  .counter-value.blue  { color: #58a6ff; font-size: 16px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  @media (min-width: 769px) { .counter-value.blue { font-size: 20px; } }
+
+  .counter-sub { font-size: 11px; color: #484f58; margin-top: 4px; }
+
+  /* ── Panel último cambio ──────────────────────────────────*/
+  .last-change-wrap {
+    background: #161b22; border-radius: 12px; border: 0.5px solid #30363d;
+    padding: 16px 18px 16px 22px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+    position: relative; overflow: hidden;
+  }
+
+  @media (min-width: 769px) {
+    .last-change-wrap {
+      border-radius: 14px; padding: 24px 32px;
+      margin-bottom: 24px; flex-wrap: nowrap; gap: 24px; min-height: 110px;
+    }
+  }
+
+  .last-change-accent {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px; border-radius: 14px 0 0 14px; transition: background 0.5s;
+  }
+
+  .last-change-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0; transition: background 0.5s;
+  }
+
+  @media (min-width: 769px) {
+    .last-change-icon { width: 60px; height: 60px; font-size: 28px; }
+  }
+
+  .last-change-info { flex: 1; min-width: 0; }
+  .last-change-label { font-size: 10px; color: #484f58; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+
+  .last-change-name {
+    font-size: 20px; font-weight: 700; color: #ffffff; margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  @media (min-width: 769px) { .last-change-name { font-size: 30px; margin-bottom: 6px; } }
+
+  .last-change-detail { font-size: 13px; color: #8b949e; }
+
+  @media (min-width: 769px) { .last-change-detail { font-size: 15px; } }
+
+  .last-change-time {
+    text-align: right; flex-shrink: 0;
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+  }
+
+  @media (min-width: 481px) { .last-change-time { width: auto; display: block; } }
+
+  .last-change-time .time-label { font-size: 10px; color: #484f58; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .last-change-time .time-value { font-size: 18px; font-weight: 600; color: #e6edf3; font-variant-numeric: tabular-nums; }
+
+  @media (min-width: 769px) { .last-change-time .time-value { font-size: 24px; } }
+
+  @keyframes flashChange {
+    0%   { background: #1f2d3d; border-color: #2d4a6a; }
+    100% { background: #161b22; border-color: #30363d; }
+  }
+
+  .last-change-wrap.new-change { animation: flashChange 2s ease; }
+
+  /* ── Tabla de agentes ─────────────────────────────────────
+     Nueva columna: Chats (cantidad asignada al agente).
+     Se muestra en móvil también (es dato importante).
+  ───────────────────────────────────────────────────────── */
+  .table-wrap {
+    background: #161b22; border-radius: 12px;
+    border: 0.5px solid #30363d; overflow: hidden; margin-bottom: 16px;
+  }
+
+  @media (min-width: 769px) {
+    .table-wrap { border-radius: 14px; margin-bottom: 24px; }
+  }
+
+  .table-header {
+    padding: 12px 16px; border-bottom: 0.5px solid #21262d;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 6px;
+  }
+
+  @media (min-width: 769px) { .table-header { padding: 16px 24px; } }
+
+  .table-header-left { display: flex; align-items: center; gap: 8px; }
+  .table-title { font-size: 13px; font-weight: 500; color: #e6edf3; }
+
+  @media (min-width: 769px) { .table-title { font-size: 14px; } }
+
+  .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px;
+    background: #21262d; color: #8b949e; border: 0.5px solid #30363d;
+  }
+
+  .refresh-indicator { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #484f58; }
+
+  .refresh-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #3fb950; opacity: 0; transition: opacity 0.3s;
+  }
+
+  .refresh-dot.active { opacity: 1; }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  th {
+    padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 500;
+    color: #484f58; text-transform: uppercase; letter-spacing: 0.8px;
+    border-bottom: 0.5px solid #21262d;
+  }
+
+  @media (min-width: 769px) {
+    th { padding: 10px 24px; font-size: 11px; letter-spacing: 1px; }
+  }
+
+  td {
+    padding: 12px 12px; font-size: 13px;
+    border-bottom: 0.5px solid #161b22; transition: background 0.3s;
+  }
+
+  @media (min-width: 769px) { td { padding: 14px 24px; font-size: 15px; } }
+
+  tbody tr { transition: background 0.2s; animation: fadeIn 0.4s ease; }
+  tbody tr:hover td { background: #1c2128; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .agent-name { font-weight: 600; font-size: 15px; color: #ffffff; }
+
+  @media (min-width: 769px) { .agent-name { font-size: 18px; } }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.3px; white-space: nowrap;
+  }
+
+  .status-pill.online  { background: #0f2a1a; color: #3fb950; border: 0.5px solid #1e4d2f; }
+  .status-pill.offline { background: #2a0f0f; color: #f85149; border: 0.5px solid #4a1f1f; }
+
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .status-dot.green { background: #3fb950; box-shadow: 0 0 5px #3fb95088; animation: pulse 2s infinite; }
+  .status-dot.red   { background: #f85149; }
+
+  /* Badge de chats asignados al agente */
+  .chat-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 26px; height: 22px;
+    background: #21262d; color: #e6edf3;
+    border: 0.5px solid #30363d;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding: 0 8px;
+    transition: all 0.3s;
+  }
+
+  /* Colores según carga de trabajo */
+  .chat-badge.load-high   { background: #2a0f0f; color: #f85149; border-color: #4a1f1f; } /* >= 8 chats */
+  .chat-badge.load-mid    { background: #2a1f0f; color: #d29922; border-color: #4a3010; } /* >= 4 chats */
+  .chat-badge.load-low    { background: #0f2a1a; color: #3fb950; border-color: #1e4d2f; } /* 1-3 chats  */
+  .chat-badge.load-none   { background: #21262d; color: #484f58; border-color: #30363d; } /* 0 chats    */
+
+  .mins { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 500; }
+  .mins.high { color: #f85149; }
+  .mins.mid  { color: #d29922; }
+  .mins.low  { color: #484f58; }
+
+  /* Columna de barra — solo desktop */
+  .bar-col { display: none; }
+  @media (min-width: 769px) { .bar-col { display: table-cell; } }
+
+  .bar-th { display: none; }
+  @media (min-width: 769px) { .bar-th { display: table-cell; min-width: 160px; } }
+
+  .bar-wrap { display: flex; align-items: center; gap: 10px; }
+
+  .bar-bg {
+    flex: 1; height: 5px; background: #21262d;
+    border-radius: 3px; max-width: 140px; overflow: hidden;
+  }
+
+  .bar-fill { height: 5px; border-radius: 3px; transition: width 0.8s ease; }
+
+  /* ── Loading / Error ──────────────────────────────────────*/
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px 20px; color: #484f58; font-size: 13px; gap: 10px;
+  }
+
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid #21262d; border-top-color: #58a6ff;
+    border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error { padding: 20px; text-align: center; color: #f85149; font-size: 13px; }
+
+  @keyframes highlight {
+    0%   { background: #1f3a5a; }
+    100% { background: transparent; }
+  }
+
+  .changed { animation: highlight 1.5s ease; }
+
+  /* ── DB Cruda ─────────────────────────────────────────────*/
+  .raw-header {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px; flex-wrap: wrap; gap: 8px;
+  }
+
+  .raw-title-row { display: flex; align-items: center; gap: 8px; }
+
+  .raw-toggle-btn {
+    font-size: 12px; padding: 5px 14px; border-radius: 8px;
+    background: #21262d; color: #8b949e; border: 0.5px solid #30363d;
+    cursor: pointer; white-space: nowrap;
+  }
+
+  .raw-section { background: #161b22; border-radius: 12px; border: 0.5px solid #30363d; overflow: hidden; }
+  .raw-scroll  { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  .raw-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 11px; font-family: 'Courier New', monospace;
+    min-width: 600px;
+  }
+
+  @media (min-width: 769px) { .raw-table { font-size: 12px; } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════════ -->
+<header>
+  <div class="header-left">
+    <div class="logo-dot"></div>
+    <h1>Monitoreo de agentes — Naty</h1>
+  </div>
+  <div class="header-right">
+    <span id="last-update">Cargando...</span>
+    <span id="clock"></span>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════
+     CONTADORES DE CONVERSACIONES
+     Datos de naty_conversations (via n8n desde Chatwoot).
+     Muestra: Total chats | Asignados | Sin asignar
+════════════════════════════════════════════════════════ -->
+<div class="chat-counters">
+
+  <div class="chat-card">
+    <div class="chat-card-icon purple">💬</div>
+    <div class="chat-card-info">
+      <div class="chat-card-label">Total chats</div>
+      <div class="chat-card-value purple" id="chat-total">—</div>
+    </div>
+  </div>
+
+  <div class="chat-card">
+    <div class="chat-card-icon teal">✅</div>
+    <div class="chat-card-info">
+      <div class="chat-card-label">Asignados</div>
+      <div class="chat-card-value teal" id="chat-assigned">—</div>
+    </div>
+  </div>
+
+  <div class="chat-card" style="grid-column: 1 / -1;">
+    <div class="chat-card-icon amber">⏳</div>
+    <div class="chat-card-info">
+      <div class="chat-card-label">Sin asignar</div>
+      <div class="chat-card-value amber" id="chat-unassigned">—</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     CONTADORES DE AGENTES
+     Online | Offline | Mayor tiempo offline
+════════════════════════════════════════════════════════ -->
+<div class="counters">
+  <div class="counter-card online">
+    <div class="counter-icon green">🟢</div>
+    <div class="counter-info">
+      <div class="counter-label">Agentes online</div>
+      <div class="counter-value green" id="count-online">—</div>
+      <div class="counter-sub">Activos ahora</div>
+    </div>
+  </div>
+  <div class="counter-card offline">
+    <div class="counter-icon red">🔴</div>
+    <div class="counter-info">
+      <div class="counter-label">Agentes offline</div>
+      <div class="counter-value red" id="count-offline">—</div>
+      <div class="counter-sub">Fuera de línea</div>
+    </div>
+  </div>
+  <div class="counter-card top">
+    <div class="counter-icon blue">⏱</div>
+    <div class="counter-info">
+      <div class="counter-label">Mayor tiempo offline</div>
+      <div class="counter-value blue" id="top-offline">—</div>
+      <div class="counter-sub" id="top-offline-mins"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ÚLTIMO CAMBIO DE ESTADO
+════════════════════════════════════════════════════════ -->
+<div class="last-change-wrap" id="last-change-wrap">
+  <div class="last-change-accent" id="last-change-accent" style="background:#30363d;"></div>
+  <div class="last-change-icon" id="last-change-icon" style="background:#21262d;">
+    <span id="last-change-emoji">⏳</span>
+  </div>
+  <div class="last-change-info">
+    <div class="last-change-label">Último cambio detectado</div>
+    <div class="last-change-name" id="last-change-name">Esperando primer cambio...</div>
+    <div class="last-change-detail" id="last-change-detail">El panel se actualizará al detectar un cambio de estado</div>
+  </div>
+  <div class="last-change-time">
+    <div class="time-label">Hora del cambio</div>
+    <div class="time-value" id="last-change-time">—</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TABLA DE AGENTES
+     Columnas: Nombre | Estado | Chats | T. Offline | Barra
+     La columna "Chats" muestra los chats asignados al agente
+     combinando datos de naty_logs + naty_conversations.
+     Color del badge según carga:
+       Verde  → 1-3 chats (carga baja)
+       Amarillo → 4-7 chats (carga media)
+       Rojo   → 8+ chats (carga alta)
+       Gris   → 0 chats (sin carga)
+════════════════════════════════════════════════════════ -->
+<div class="table-wrap">
+  <div class="table-header">
+    <div class="table-header-left">
+      <span class="table-title">Estado de agentes</span>
+      <span class="badge" id="total-badge">— agentes</span>
+    </div>
+    <div class="refresh-indicator">
+      <div class="refresh-dot" id="refresh-dot"></div>
+      <span>Cada 15s</span>
+    </div>
+  </div>
+  <div id="table-container">
+    <div class="loading">
+      <div class="spinner"></div>
+      Cargando datos...
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     DB CRUDA (colapsable)
+════════════════════════════════════════════════════════ -->
+<div style="margin-top:8px; padding-bottom:32px;">
+  <div class="raw-header">
+    <div class="raw-title-row">
+      <span style="font-size:14px; font-weight:500; color:#e6edf3;">Base de datos cruda</span>
+      <span class="badge">naty_logs</span>
+    </div>
+    <button class="raw-toggle-btn" onclick="toggleRaw()" id="raw-toggle">Mostrar</button>
+  </div>
+
+  <div id="raw-section" class="raw-section" style="display:none;">
+    <div class="raw-scroll">
+      <table class="raw-table">
+        <thead>
+          <tr style="background:#0d1117;">
+            <th style="padding:10px 14px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d; white-space:nowrap;">id_agente</th>
+            <th style="padding:10px 14px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d; white-space:nowrap;">nombre</th>
+            <th style="padding:10px 14px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d; white-space:nowrap;">estado</th>
+            <th style="padding:10px 14px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d; white-space:nowrap;">ultima_conexion</th>
+            <th style="padding:10px 14px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d; white-space:nowrap;">tiempo_desc_min</th>
+            <th style="padding:10px 14px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d; white-space:nowrap;">chats_asignados</th>
+            <th style="padding:10px 14px; text-align:left; color:#484f58; font-size:10px; text-transform:uppercase; letter-spacing:1px; border-bottom:0.5px solid #21262d; white-space:nowrap;">ultimo_chequeo</th>
+          </tr>
+        </thead>
+        <tbody id="raw-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════ -->
+<script>
+
+  /* ── Credenciales Supabase ────────────────────────────────
+     Clave anon = solo lectura pública. Nunca service_role.
+  ───────────────────────────────────────────────────────── */
+  const SUPABASE_URL = 'https://yzhlaypunmtfokbblpxt.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6aGxheXB1bm10Zm9rYmJscHh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNDkyMTYsImV4cCI6MjA4ODgyNTIxNn0.CSK39wZBY7hgLByD5RK92jFc6QzoBHSzLN3EpdPPo3o';
+
+  const HEADERS = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`
+  };
+
+  /* ── Estado en memoria ────────────────────────────────────
+     previousStates — detectar cambios entre ciclos
+     convMap        — mapa { id_agente: total_conversaciones }
+     maxMins        — máximo para escalar barras
+  ───────────────────────────────────────────────────────── */
+  let previousStates = {};
+  let convMap        = {};   // { id_agente: total_conversaciones }
+  let maxMins        = 1;
+
+
+  /* ── Reloj ────────────────────────────────────────────────*/
+  function clock() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  setInterval(clock, 1000);
+  clock();
+
+
+  /* ── Animar cambio de valor ───────────────────────────────*/
+  function animateValue(el, newVal) {
+    if (el.textContent !== String(newVal)) {
+      el.textContent = newVal;
+      el.classList.remove('changed');
+      void el.offsetWidth;
+      el.classList.add('changed');
+    }
+  }
+
+
+  /* ── Urgencia por minutos offline ────────────────────────
+     >= 800 → high   >= 100 → mid   < 100 → low
+  ───────────────────────────────────────────────────────── */
+  function minsColor(mins) {
+    if (mins >= 800) return 'high';
+    if (mins >= 100) return 'mid';
+    return 'low';
+  }
+
+  function barColor(mins) {
+    if (mins >= 800) return '#f85149';
+    if (mins >= 100) return '#d29922';
+    return '#484f58';
+  }
+
+
+  /* ── Clase del badge de chats según carga ─────────────────
+     >= 8 → high (rojo)
+     >= 4 → mid  (amarillo)
+     >= 1 → low  (verde)
+      0   → none (gris)
+  ───────────────────────────────────────────────────────── */
+  function chatBadgeClass(n) {
+    if (n >= 8) return 'load-high';
+    if (n >= 4) return 'load-mid';
+    if (n >= 1) return 'load-low';
+    return 'load-none';
+  }
+
+
+  /* ── Formatear minutos ────────────────────────────────────*/
+  function formatMins(mins) {
+    if (!mins || mins === 0) return '—';
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    return `${mins} min`;
+  }
+
+
+  /* ── Panel último cambio ──────────────────────────────────*/
+  function updateLastChange(agent, type) {
+    const isOffline = type === 'went_offline';
+    const color  = isOffline ? '#f85149' : '#3fb950';
+    const bgIcon = isOffline ? '#4a1f1f' : '#1a4731';
+
+    document.getElementById('last-change-accent').style.background = color;
+    document.getElementById('last-change-icon').style.background   = bgIcon;
+    document.getElementById('last-change-emoji').textContent       = isOffline ? '🔴' : '🟢';
+    document.getElementById('last-change-name').textContent        = agent.nombre;
+
+    const detail = document.getElementById('last-change-detail');
+    detail.textContent = isOffline ? 'Se desconectó — pasó a offline' : 'Se reconectó — volvió a online';
+    detail.style.color = color;
+
+    document.getElementById('last-change-time').textContent = new Date().toLocaleTimeString('es-HN');
+
+    const wrap = document.getElementById('last-change-wrap');
+    wrap.classList.remove('new-change');
+    void wrap.offsetWidth;
+    wrap.classList.add('new-change');
+  }
+
+
+  /* ── Fetch de conversaciones (desde naty_logs) ────────────
+     Todo en una sola tabla. La fila id_agente=0 guarda los
+     meta globales del equipo (all/assigned/unassigned).
+     Las filas id_agente > 0 tienen total_conversaciones.
+     n8n escribe todo esto en el mismo nodo Update/Insert.
+  ───────────────────────────────────────────────────────── */
+  async function fetchConversations() {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/naty_logs?select=id_agente,total_conversaciones,all_count,assigned_count,unassigned_count`,
+        { headers: HEADERS }
+      );
+      const data = await res.json();
+
+      convMap = {};
+      let allCount = null, assignedCount = null, unassignedCount = null;
+
+      for (const row of data) {
+        if (row.id_agente === 0) {
+          // Fila especial con totales globales del equipo
+          allCount        = row.all_count;
+          assignedCount   = row.assigned_count;
+          unassignedCount = row.unassigned_count;
+        } else {
+          // Chats asignados a cada agente
+          convMap[row.id_agente] = row.total_conversaciones || 0;
+        }
+      }
+
+      animateValue(document.getElementById('chat-total'),      allCount        ?? '—');
+      animateValue(document.getElementById('chat-assigned'),   assignedCount   ?? '—');
+      animateValue(document.getElementById('chat-unassigned'), unassignedCount ?? '—');
+
+    } catch(e) {
+      console.warn('Error leyendo conversaciones desde naty_logs:', e.message);
+    }
+  }
+
+
+  /* ── Fetch de agentes (naty_logs) ─────────────────────────
+     Un solo fetch trae todo: estado, chats y meta globales.
+     - Excluye id_agente=0 (_meta_globales) de la tabla
+     - Ordena: online primero, luego offline por tiempo
+     - total_conversaciones viene directo de cada fila
+  ───────────────────────────────────────────────────────── */
+  async function fetchAgents() {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/naty_logs?select=*&id_agente=neq.0&order=estado.desc,tiempo_desconectado_minutos.desc`,
+        { headers: HEADERS }
+      );
+
+      if (!res.ok) throw new Error('Error al conectar con Supabase');
+
+      const data = await res.json();
+
+      // Parpadeo del indicador de refresco
+      const dot = document.getElementById('refresh-dot');
+      dot.classList.add('active');
+      setTimeout(() => dot.classList.remove('active'), 800);
+
+      // Detectar cambios de estado (excluir fila meta)
+      let changeDetected = false;
+      for (const agent of data) {
+        if (agent.id_agente === 0) continue;
+        const prev = previousStates[agent.id_agente];
+        if (prev && prev !== agent.estado && !changeDetected) {
+          updateLastChange(agent, agent.estado === 'offline' ? 'went_offline' : 'came_online');
+          changeDetected = true;
+        }
+      }
+
+      for (const agent of data) {
+        if (agent.id_agente !== 0) previousStates[agent.id_agente] = agent.estado;
+      }
+
+      // Actualizar contadores de agentes (excluir fila meta)
+      const agentes      = data.filter(a => a.id_agente !== 0);
+      const onlineCount  = agentes.filter(a => a.estado === 'online').length;
+      const offlineCount = agentes.filter(a => a.estado === 'offline').length;
+      const topAgent     = agentes.find(a => a.estado === 'offline');
+
+      animateValue(document.getElementById('count-online'),  onlineCount);
+      animateValue(document.getElementById('count-offline'), offlineCount);
+
+      if (topAgent) {
+        document.getElementById('top-offline').textContent      = topAgent.nombre;
+        document.getElementById('top-offline-mins').textContent = formatMins(topAgent.tiempo_desconectado_minutos);
+      } else {
+        document.getElementById('top-offline').textContent      = 'Todos online';
+        document.getElementById('top-offline-mins').textContent = '';
+      }
+
+      document.getElementById('total-badge').textContent = `${agentes.length} agentes`;
+      document.getElementById('last-update').textContent = `Actualizado: ${new Date().toLocaleTimeString('es-HN')}`;
+
+      maxMins = Math.max(1, ...agentes.map(a => a.tiempo_desconectado_minutos || 0));
+
+      // Renderizar tabla — total_conversaciones viene directo de la fila
+      const rows = agentes.map(agent => {
+        const isOnline   = agent.estado === 'online';
+        const mins       = agent.tiempo_desconectado_minutos || 0;
+        const pct        = isOnline ? 0 : Math.round((mins / maxMins) * 100);
+        const chats      = agent.total_conversaciones ?? 0;
+        const badgeClass = chatBadgeClass(chats);
+
+        return `<tr>
+          <td class="agent-name">${agent.nombre}</td>
+          <td>
+            <span class="status-pill ${isOnline ? 'online' : 'offline'}">
+              <span class="status-dot ${isOnline ? 'green' : 'red'}"></span>
+              ${isOnline ? 'Online' : 'Offline'}
+            </span>
+          </td>
+          <td>
+            <span class="chat-badge ${badgeClass}">${chats}</span>
+          </td>
+          <td>
+            <span class="mins ${isOnline ? 'low' : minsColor(mins)}">
+              ${isOnline ? '—' : formatMins(mins)}
+            </span>
+          </td>
+          <td class="bar-col">
+            <div class="bar-wrap">
+              <div class="bar-bg">
+                <div class="bar-fill" style="width:${pct}%; background:${barColor(mins)};"></div>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('table-container').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Agente</th>
+              <th>Estado</th>
+              <th>Chats</th>
+              <th>T. offline</th>
+              <th class="bar-th"></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+
+    } catch (err) {
+      document.getElementById('table-container').innerHTML =
+        `<div class="error">Error al cargar datos: ${err.message}</div>`;
+    }
+  }
+
+
+  /* ── Ciclo principal ──────────────────────────────────────
+     Ambos fetches se ejecutan en paralelo con Promise.all.
+     fetchConversations primero llena convMap, luego
+     fetchAgents lo usa al renderizar la tabla.
+     Nota: el orden importa — conversations antes de agents.
+  ───────────────────────────────────────────────────────── */
+  /* ── Ciclo principal ──────────────────────────────────────
+     Un solo fetch trae todo desde naty_logs.
+     fetchConversations llena los contadores globales (fila 0).
+     fetchAgents renderiza la tabla (excluye fila 0).
+     Se ejecutan en paralelo — ambos leen la misma tabla.
+  ───────────────────────────────────────────────────────── */
+  async function fetchAll() {
+    await Promise.all([fetchConversations(), fetchAgents()]);
+  }
+
+  fetchAll();
+  setInterval(fetchAll, 15000);
+
+
+  /* ── Toggle DB cruda ──────────────────────────────────────*/
+  function toggleRaw() {
+    const section = document.getElementById('raw-section');
+    const btn     = document.getElementById('raw-toggle');
+
+    if (section.style.display === 'none') {
+      section.style.display = 'block';
+      btn.textContent = 'Ocultar';
+      btn.style.color = '#58a6ff';
+      fetchRaw();
+    } else {
+      section.style.display = 'none';
+      btn.textContent = 'Mostrar';
+      btn.style.color = '#8b949e';
+    }
+  }
+
+
+  /* ── Fetch DB cruda ───────────────────────────────────────
+     Todo en naty_logs — una sola tabla, una sola query.
+  ───────────────────────────────────────────────────────── */
+  async function fetchRaw() {
+    const tbody   = document.getElementById('raw-tbody');
+    const section = document.getElementById('raw-section');
+    if (!tbody || section.style.display === 'none') return;
+
+    try {
+      const res  = await fetch(
+        `${SUPABASE_URL}/rest/v1/naty_logs?select=*&order=id_agente.asc`,
+        { headers: HEADERS }
+      );
+      const logs = await res.json();
+
+      tbody.innerHTML = logs.map((r, i) => `
+        <tr style="border-bottom:0.5px solid #21262d; ${i % 2 === 0 ? 'background:#0d1117;' : ''}">
+          <td style="padding:8px 14px; color:#58a6ff; white-space:nowrap;">${r.id_agente}</td>
+          <td style="padding:8px 14px; color:#e6edf3; white-space:nowrap;">${r.nombre}</td>
+          <td style="padding:8px 14px; color:${r.estado === 'online' ? '#3fb950' : '#f85149'}; white-space:nowrap;">${r.estado}</td>
+          <td style="padding:8px 14px; color:#8b949e; white-space:nowrap;">${r.ultima_conexion ?? '—'}</td>
+          <td style="padding:8px 14px; color:#d29922; white-space:nowrap;">${r.tiempo_desconectado_minutos}</td>
+          <td style="padding:8px 14px; color:#a371f7; white-space:nowrap;">${r.total_conversaciones ?? '—'}</td>
+          <td style="padding:8px 14px; color:#8b949e; white-space:nowrap;">${r.ultimo_chequeo ?? '—'}</td>
+        </tr>`).join('');
+
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:16px; color:#f85149; text-align:center;">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  setInterval(fetchRaw, 15000);
+
+</script>
+</body>
+</html>
