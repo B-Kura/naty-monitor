@@ -1821,7 +1821,7 @@
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const result = await res.json();
 
-      if (result.ok) {
+      if (result.ok === true) {
         // Marcar visualmente la conv como reasignada
         const convItem = document.getElementById(`conv-item-${convId}`);
         if (convItem) {
