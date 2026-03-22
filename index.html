@@ -538,6 +538,74 @@
 
   .changed { animation: highlight 1.5s ease; }
 
+  /* ── Filter bar ───────────────────────────────────────────*/
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 20px 12px;
+    border-bottom: 1px solid var(--border-light);
+    background: rgba(0,0,0,0.02);
+  }
+
+  @media (min-width: 769px) {
+    .filter-bar { padding: 10px 28px 12px; gap: 10px; }
+  }
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .filter-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-main);
+    flex-shrink: 0;
+  }
+
+  .filter-chip {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .filter-chip:hover {
+    background: var(--bg-hover);
+    color: var(--text-main);
+    transform: translateY(-1px);
+  }
+
+  .filter-chip.active {
+    background: var(--blue-bg);
+    color: var(--blue-text);
+    border-color: var(--blue-border);
+  }
+
+  .filter-chip.sort-chip.active {
+    background: var(--purple-bg);
+    color: var(--purple-text);
+    border-color: rgba(192, 132, 252, 0.4);
+  }
+
+  .sort-dir {
+    font-size: 10px;
+    opacity: 0.8;
+  }
+
   /* ── DB Cruda ─────────────────────────────────────────────*/
   .raw-header {
     display: flex; align-items: center;
@@ -735,6 +803,25 @@
       <span>Cada 15s</span>
     </div>
   </div>
+
+  <!-- ── Chips de filtro y ordenamiento ─────────────────── -->
+  <div class="filter-bar">
+    <!-- Filtros de estado -->
+    <div class="filter-group">
+      <button class="filter-chip active" data-filter="all"     onclick="setFilter('all')">Todos</button>
+      <button class="filter-chip"        data-filter="online"  onclick="setFilter('online')">🟢 Online</button>
+      <button class="filter-chip"        data-filter="offline" onclick="setFilter('offline')">🔴 Offline</button>
+    </div>
+    <div class="filter-divider"></div>
+    <!-- Ordenamientos -->
+    <div class="filter-group">
+      <button class="filter-chip sort-chip" data-sort="estado"  onclick="setSort('estado')" title="Online primero">Estado</button>
+      <button class="filter-chip sort-chip" data-sort="nombre"  onclick="setSort('nombre')" title="Alfabético">A–Z</button>
+      <button class="filter-chip sort-chip" data-sort="chats"   onclick="setSort('chats')"  title="Chats asignados">Chats</button>
+      <button class="filter-chip sort-chip" data-sort="offline" onclick="setSort('offline')" title="Tiempo offline">T. Offline</button>
+    </div>
+  </div>
+
   <div id="table-container">
     <div class="loading">
       <div class="spinner"></div>
@@ -826,6 +913,11 @@
   let convMap        = {};
   let maxMins        = 1;
   let agentSnapshot  = []; // último snapshot de agentes para usar en assignAll()
+
+  // ── Estado de filtros y ordenamiento ──────────────────────
+  let activeFilter = 'all';    // 'all' | 'online' | 'offline'
+  let activeSort   = 'estado'; // 'estado' | 'nombre' | 'chats' | 'offline'
+  let sortDir      = {};       // { estado: 1, nombre: 1, chats: -1, offline: -1 } — 1=asc, -1=desc
 
   function clock() {
     document.getElementById('clock').textContent =
@@ -976,8 +1068,57 @@
 
       maxMins = Math.max(1, ...agentes.map(a => a.tiempo_desconectado_minutos || 0));
 
-      const rows = agentes.map(agent => {
-        const isOnline   = agent.estado === 'online';
+      renderTable();
+
+    } catch (err) {
+      document.getElementById('table-container').innerHTML =
+        `<div class="error">Error al cargar datos: ${err.message}</div>`;
+    }
+  }
+
+  /* ── Renderizar tabla aplicando filtro y orden activos ────*/
+  function renderTable() {
+    if (!agentSnapshot.length) return;
+
+    // 1. Filtrar
+    let lista = agentSnapshot.filter(a => {
+      const isOnline = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos || 0) < OFFLINE_THRESHOLD);
+      if (activeFilter === 'online')  return isOnline;
+      if (activeFilter === 'offline') return !isOnline;
+      return true;
+    });
+
+    // 2. Ordenar
+    const dir = sortDir[activeSort] ?? (activeSort === 'estado' ? 1 : activeSort === 'nombre' ? 1 : -1);
+
+    lista = [...lista].sort((a, b) => {
+      switch (activeSort) {
+        case 'nombre':
+          return dir * a.nombre.localeCompare(b.nombre, 'es');
+        case 'chats':
+          return dir * ((a.total_conversaciones || 0) - (b.total_conversaciones || 0));
+        case 'offline':
+          return dir * ((a.tiempo_desconectado_minutos || 0) - (b.tiempo_desconectado_minutos || 0));
+        case 'estado':
+        default: {
+          // online primero, luego offline por tiempo
+          const aOnline = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos || 0) < OFFLINE_THRESHOLD);
+          const bOnline = b.estado === 'online' || (b.estado === 'offline' && (b.tiempo_desconectado_minutos || 0) < OFFLINE_THRESHOLD);
+          if (aOnline !== bOnline) return dir * (aOnline ? -1 : 1);
+          return (b.tiempo_desconectado_minutos || 0) - (a.tiempo_desconectado_minutos || 0);
+        }
+      }
+    });
+
+    // 3. Actualizar badge con conteo filtrado
+    const visibleLabel = activeFilter === 'all'
+      ? `${agentSnapshot.length} agentes`
+      : `${lista.length} / ${agentSnapshot.length} agentes`;
+    document.getElementById('total-badge').textContent = visibleLabel;
+
+    // 4. Renderizar filas
+    const rows = lista.map(agent => {
+        const isOnline   = agent.estado === 'online' || (agent.estado === 'offline' && (agent.tiempo_desconectado_minutos || 0) < OFFLINE_THRESHOLD);
         const mins       = agent.tiempo_desconectado_minutos || 0;
         const pct        = isOnline ? 0 : Math.round((mins / maxMins) * 100);
         const chats      = agent.total_conversaciones ?? 0;
@@ -1007,26 +1148,62 @@
             </div>
           </td>
         </tr>`;
-      }).join('');
+    }).join('');
 
-      document.getElementById('table-container').innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Agente</th>
-              <th>Estado</th>
-              <th>Chats</th>
-              <th>T. offline</th>
-              <th class="bar-th"></th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+    const empty = lista.length === 0
+      ? `<tr><td colspan="5" style="padding:28px; text-align:center; color:var(--text-dark); font-size:14px;">Sin agentes para mostrar</td></tr>`
+      : '';
 
-    } catch (err) {
-      document.getElementById('table-container').innerHTML =
-        `<div class="error">Error al cargar datos: ${err.message}</div>`;
+    document.getElementById('table-container').innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Agente</th>
+            <th>Estado</th>
+            <th>Chats</th>
+            <th>T. offline</th>
+            <th class="bar-th"></th>
+          </tr>
+        </thead>
+        <tbody>${rows || empty}</tbody>
+      </table>`;
+  }
+
+  /* ── Cambiar filtro de estado ─────────────────────────────*/
+  function setFilter(f) {
+    activeFilter = f;
+    document.querySelectorAll('.filter-chip[data-filter]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === f);
+    });
+    renderTable();
+  }
+
+  /* ── Cambiar ordenamiento ─────────────────────────────────*/
+  function setSort(s) {
+    if (activeSort === s) {
+      // Mismo campo → invertir dirección
+      sortDir[s] = (sortDir[s] ?? (s === 'nombre' || s === 'estado' ? 1 : -1)) * -1;
+    } else {
+      activeSort = s;
+      // Dirección por defecto según campo
+      if (!sortDir[s]) sortDir[s] = (s === 'nombre' || s === 'estado') ? 1 : -1;
     }
+
+    // Actualizar chips: limpiar activos sort y marcar el nuevo
+    document.querySelectorAll('.sort-chip').forEach(btn => {
+      const isActive = btn.dataset.sort === activeSort;
+      btn.classList.toggle('active', isActive);
+      // Mostrar flecha de dirección
+      const label = { estado: 'Estado', nombre: 'A–Z', chats: 'Chats', offline: 'T. Offline' }[btn.dataset.sort];
+      if (isActive) {
+        const arrow = sortDir[activeSort] === 1 ? ' ↑' : ' ↓';
+        btn.innerHTML = label + `<span class="sort-dir">${arrow}</span>`;
+      } else {
+        btn.textContent = label;
+      }
+    });
+
+    renderTable();
   }
 
   async function fetchAll() {
