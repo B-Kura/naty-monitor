@@ -491,6 +491,17 @@
   .hev-assign  .history-item-icon { background: var(--blue-bg); }
   .hev-alert   .history-item-icon { background: var(--amber-bg); }
 
+  .history-day-header {
+    padding: 8px 20px 6px;
+    font-size: 11px; font-weight: 700;
+    color: var(--text-dark);
+    text-transform: uppercase; letter-spacing: 1px;
+    background: rgba(0,0,0,0.03);
+    border-bottom: 1px solid var(--border-light);
+    position: sticky; top: 0;
+  }
+  @media (min-width: 769px) { .history-day-header { padding: 8px 28px 6px; } }
+
   /* ── Tabla de agentes ─────────────────────────────────────*/
   .table-wrap {
     border-radius: 14px;
@@ -1026,6 +1037,27 @@
 </div>
 
 <div style="margin-top:16px; padding-bottom:40px;">
+
+  <!-- ── Historial persistente (Supabase, 7 días) ─────────-->
+  <div class="raw-header" style="margin-bottom:12px;">
+    <div class="raw-title-row">
+      <span style="font-size:15px; font-weight:600; color:var(--text-title);">📅 Historial persistente</span>
+      <span class="badge">últimos 7 días</span>
+    </div>
+    <button class="raw-toggle-btn" onclick="togglePersistentHistory()" id="persistent-history-toggle">Mostrar</button>
+  </div>
+  <div id="persistent-history-section" style="display:none; margin-bottom:20px;">
+    <div class="history-panel glass-panel" style="display:block; margin-bottom:0;">
+      <div class="history-header">
+        <span class="history-title">Eventos guardados en Supabase</span>
+        <span class="badge" id="persistent-history-count">—</span>
+      </div>
+      <div class="history-list" id="persistent-history-list">
+        <div class="history-empty">Cargando...</div>
+      </div>
+    </div>
+  </div>
+
   <div class="raw-header">
     <div class="raw-title-row">
       <span style="font-size:15px; font-weight:600; color:var(--text-title);">Base de datos cruda</span>
@@ -1333,7 +1365,13 @@
             `⏳ ${unassignedCount} conversación${unassignedCount !== 1 ? 'es' : ''} sin asignar`,
             `Llevan más de ${minsPendiente} minutos esperando asignación en el equipo Naty.`
           );
-          unassignedSince = ahora; // resetear para no repetir cada ciclo
+          logEventToSupabase(
+            'alerta_sin_asignar', '⏳',
+            `${unassignedCount} conversación${unassignedCount !== 1 ? 'es' : ''} sin asignar`,
+            `Llevan más de ${minsPendiente} min esperando asignación`,
+            { unassigned_count: unassignedCount, minutos: minsPendiente }
+          );
+          unassignedSince = ahora;
         }
       } else {
         unassignedSince = null; // se asignaron todas, resetear
@@ -1829,6 +1867,103 @@
     if (days  > 0) return `${days}d ${hours % 24}h`;
     if (hours > 0) return `${hours}h ${mins % 60}m`;
     return `${mins}m`;
+  }
+
+  /* ── Escribir evento en Supabase (alerta sin asignar) ─────
+     Los otros eventos (asignacion_auto, reasignacion) los
+     escribe directamente n8n desde los webhooks.
+     Solo la alerta viene del HTML porque no pasa por n8n.
+  ───────────────────────────────────────────────────────── */
+  async function logEventToSupabase(tipo, emoji, titulo, detalle, metadata = {}) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/naty_eventos`, {
+        method:  'POST',
+        headers: {
+          ...HEADERS,
+          'Content-Type':  'application/json',
+          'Prefer':        'return=minimal'
+        },
+        body: JSON.stringify({ tipo, emoji, titulo, detalle, metadata })
+      });
+    } catch(e) {
+      console.warn('Error guardando evento en Supabase:', e.message);
+    }
+  }
+
+  /* ── Toggle historial persistente ─────────────────────────*/
+  function togglePersistentHistory() {
+    const section = document.getElementById('persistent-history-section');
+    const btn     = document.getElementById('persistent-history-toggle');
+    const isOpen  = section.style.display !== 'none';
+    section.style.display = isOpen ? 'none' : 'block';
+    btn.textContent = isOpen ? 'Mostrar' : 'Ocultar';
+    btn.style.color = isOpen ? 'var(--text-muted)' : 'var(--blue-text)';
+    if (!isOpen) fetchPersistentHistory();
+  }
+
+  /* ── Leer historial de Supabase (últimos 7 días) ──────────*/
+  async function fetchPersistentHistory() {
+    const list      = document.getElementById('persistent-history-list');
+    const countEl   = document.getElementById('persistent-history-count');
+    list.innerHTML  = `<div class="history-empty">Cargando...</div>`;
+
+    try {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const res   = await fetch(
+        `${SUPABASE_URL}/rest/v1/naty_eventos?select=*&created_at=gte.${since}&order=created_at.desc&limit=100`,
+        { headers: HEADERS }
+      );
+
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const eventos = await res.json();
+
+      countEl.textContent = `${eventos.length} evento${eventos.length !== 1 ? 's' : ''}`;
+
+      if (eventos.length === 0) {
+        list.innerHTML = `<div class="history-empty">Sin eventos en los últimos 7 días</div>`;
+        return;
+      }
+
+      // Agrupar por día
+      const porDia = {};
+      for (const ev of eventos) {
+        const fecha = new Date(ev.created_at).toLocaleDateString('es-HN', { weekday: 'long', day: 'numeric', month: 'long' });
+        if (!porDia[fecha]) porDia[fecha] = [];
+        porDia[fecha].push(ev);
+      }
+
+      const tipoClass = {
+        asignacion_auto: 'hev-assign',
+        reasignacion:    'hev-assign',
+        alerta_sin_asignar: 'hev-alert'
+      };
+
+      const tipoBg = {
+        asignacion_auto:    'var(--blue-bg)',
+        reasignacion:       'var(--blue-bg)',
+        alerta_sin_asignar: 'var(--amber-bg)'
+      };
+
+      list.innerHTML = Object.entries(porDia).map(([fecha, evs]) => `
+        <div class="history-day-header">${fecha}</div>
+        ${evs.map(ev => {
+          const hora = new Date(ev.created_at).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' });
+          const bg   = tipoBg[ev.tipo] || 'var(--bg-hover)';
+          const cls  = tipoClass[ev.tipo] || 'hev-assign';
+          return `<div class="history-item ${cls}">
+            <div class="history-item-icon" style="background:${bg};">${ev.emoji || '📋'}</div>
+            <div class="history-item-body">
+              <div class="history-item-title">${ev.titulo}</div>
+              <div class="history-item-sub">${ev.detalle || ''}</div>
+            </div>
+            <div class="history-item-time">${hora}</div>
+          </div>`;
+        }).join('')}
+      `).join('');
+
+    } catch(e) {
+      list.innerHTML = `<div class="history-empty" style="color:var(--red-text);">Error: ${e.message}</div>`;
+    }
   }
 
 </script>
