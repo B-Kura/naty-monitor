@@ -564,6 +564,78 @@
   .filter-chip.sort-chip.active { background: var(--purple-bg); color: var(--purple-text); border-color: rgba(192,132,252,0.4); }
   .sort-dir { font-size: 10px; opacity: 0.8; }
 
+  /* ── Botón expandir conversaciones ───────────────────────*/
+  .btn-expand {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600;
+    padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-card); color: var(--text-muted);
+    cursor: pointer; white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .btn-expand:hover { background: var(--bg-hover); color: var(--text-main); transform: translateY(-1px); }
+  .btn-expand.active { background: var(--blue-bg); color: var(--blue-text); border-color: var(--blue-border); }
+  .expand-arrow { font-size: 9px; }
+
+  /* ── Fila expandida con lista de conversaciones ───────────*/
+  .conv-expand-row td { padding: 0 !important; border-bottom: 1px solid var(--border-light); }
+
+  .conv-expand-inner {
+    background: rgba(0,0,0,0.15);
+    border-top: 1px solid var(--border-light);
+    padding: 12px 20px;
+    display: flex; flex-direction: column; gap: 8px;
+    animation: fadeIn 0.2s ease;
+  }
+  @media (min-width: 769px) { .conv-expand-inner { padding: 14px 28px; } }
+
+  .conv-loading, .conv-empty {
+    font-size: 13px; color: var(--text-dark);
+    padding: 8px 0; text-align: center;
+  }
+
+  .conv-item {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    transition: background 0.2s;
+  }
+  .conv-item:hover { background: var(--bg-hover); }
+
+  .conv-item-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+  .conv-id {
+    font-size: 12px; font-weight: 700; font-family: 'Courier New', monospace;
+    color: var(--blue-text); flex-shrink: 0;
+    background: var(--blue-bg); padding: 2px 8px;
+    border-radius: 6px; border: 1px solid var(--blue-border);
+  }
+
+  .conv-contact {
+    font-size: 14px; font-weight: 600; color: var(--text-main);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 220px;
+  }
+  @media (min-width: 769px) { .conv-contact { max-width: 380px; } }
+
+  .conv-item-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  .conv-age { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+  .conv-link {
+    font-size: 12px; font-weight: 700;
+    padding: 5px 12px; border-radius: 8px;
+    background: var(--green-card); color: var(--green-text);
+    border: 1px solid var(--green-border);
+    text-decoration: none; white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .conv-link:hover { opacity: 0.85; transform: translateY(-1px); }
+
   /* ── DB Cruda ─────────────────────────────────────────────*/
   .raw-header {
     display: flex; align-items: center;
@@ -853,18 +925,21 @@
 
   /* ── Webhook n8n (evita CORS — n8n tiene el token internamente) ──*/
   const WEBHOOK_ASIGNAR  = 'https://hook.watiteam.com/webhook/naty-asignar';
+  const WEBHOOK_CONVS    = 'https://hook.watiteam.com/webhook/naty-convs-agente';
   const WEBHOOK_SECRET   = 'naty-2026-secret';
+  const CHATWOOT_BASE    = 'https://naty.watiteam.com';
   const CHATWOOT_TEAM    = 20;
-  const MAX_OFFLINE_MINS = 15;  // agentes offline > 15 min NO reciben chats en asignación
-  const OFFLINE_THRESHOLD = 5;  // agentes offline < 5 min se muestran como online
+  const MAX_OFFLINE_MINS = 15;
+  const OFFLINE_THRESHOLD = 5;
 
-  let previousStates = {};
-  let convMap        = {};
-  let maxMins        = 1;
-  let agentSnapshot  = []; // último snapshot de agentes para usar en assignAll()
-  let activeFilter   = 'all';    // 'all' | 'online' | 'offline'
-  let activeSort     = 'estado'; // 'estado' | 'nombre' | 'chats' | 'offline'
-  let sortDir        = {};       // dirección por campo: 1=asc, -1=desc
+  let previousStates  = {};
+  let convMap         = {};
+  let maxMins         = 1;
+  let agentSnapshot   = [];
+  let activeFilter    = 'all';
+  let activeSort      = 'estado';
+  let sortDir         = {};
+  let expandedAgents  = new Set(); // IDs de agentes con fila expandida
 
   function clock() {
     document.getElementById('clock').textContent =
@@ -1064,20 +1139,43 @@
       const pct        = isOnline ? 0 : Math.round((mins / maxMins) * 100);
       const chats      = agent.total_conversaciones ?? 0;
       const badgeClass = chatBadgeClass(chats);
-      return `<tr>
+      const isExpanded = expandedAgents.has(agent.id_agente);
+
+      const mainRow = `<tr class="agent-row" data-id="${agent.id_agente}">
         <td class="agent-name">${agent.nombre}</td>
         <td><span class="status-pill ${isOnline ? 'online' : 'offline'}"><span class="status-dot ${isOnline ? 'green' : 'red'}"></span>${isOnline ? 'Online' : 'Offline'}</span></td>
         <td><span class="chat-badge ${badgeClass}">${chats}</span></td>
         <td><span class="mins ${isOnline ? 'low' : minsColor(mins)}">${isOnline ? '—' : formatMins(mins)}</span></td>
         <td class="bar-col"><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${barColor(mins)};"></div></div></div></td>
+        <td style="text-align:right; padding-right:16px;">
+          ${chats > 0 ? `<button class="btn-expand ${isExpanded ? 'active' : ''}" onclick="toggleConvs(${agent.id_agente}, this)" title="Ver conversaciones">
+            💬 <span class="expand-arrow">${isExpanded ? '▲' : '▼'}</span>
+          </button>` : '<span style="color:var(--text-dark);font-size:12px;">—</span>'}
+        </td>
       </tr>`;
-    }).join('') || `<tr><td colspan="5" style="padding:28px;text-align:center;color:var(--text-dark);font-size:14px;">Sin agentes para mostrar</td></tr>`;
+
+      const expandRow = isExpanded ? `<tr class="conv-expand-row" id="convs-${agent.id_agente}">
+        <td colspan="6" style="padding:0;">
+          <div class="conv-expand-inner" id="convs-inner-${agent.id_agente}">
+            <div class="conv-loading">⏳ Cargando conversaciones...</div>
+          </div>
+        </td>
+      </tr>` : '';
+
+      return mainRow + expandRow;
+    }).join('') || `<tr><td colspan="6" style="padding:28px;text-align:center;color:var(--text-dark);font-size:14px;">Sin agentes para mostrar</td></tr>`;
 
     document.getElementById('table-container').innerHTML = `
       <table>
-        <thead><tr><th>Agente</th><th>Estado</th><th>Chats</th><th>T. offline</th><th class="bar-th"></th></tr></thead>
+        <thead><tr><th>Agente</th><th>Estado</th><th>Chats</th><th>T. offline</th><th class="bar-th"></th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
+
+    // Re-cargar datos de filas que estaban expandidas
+    expandedAgents.forEach(id => {
+      const inner = document.getElementById(`convs-inner-${id}`);
+      if (inner) loadConvs(id);
+    });
   }
 
   /* ── Cambiar filtro ───────────────────────────────────────*/
@@ -1239,6 +1337,72 @@
     el.className    = 'assign-status ' + type;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 7000);
+  }
+
+  /* ── Toggle fila expandida de conversaciones ──────────────*/
+  function toggleConvs(agentId, btn) {
+    if (expandedAgents.has(agentId)) {
+      expandedAgents.delete(agentId);
+    } else {
+      expandedAgents.add(agentId);
+    }
+    renderTable();
+  }
+
+  /* ── Cargar conversaciones del agente vía webhook n8n ─────*/
+  async function loadConvs(agentId) {
+    const inner = document.getElementById(`convs-inner-${agentId}`);
+    if (!inner) return;
+
+    try {
+      const res = await fetch(WEBHOOK_CONVS, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ secret: WEBHOOK_SECRET, agent_id: agentId })
+      });
+
+      if (!res.ok) throw new Error(`Webhook error ${res.status}`);
+
+      const data  = await res.json();
+      const convs = data?.convs || [];
+
+      if (convs.length === 0) {
+        inner.innerHTML = `<div class="conv-empty">Sin conversaciones activas asignadas</div>`;
+        return;
+      }
+
+      const ahora = Date.now();
+
+      inner.innerHTML = convs.map(c => {
+        const convUrl      = `${CHATWOOT_BASE}/app/accounts/1/team/${CHATWOOT_TEAM}/conversations/${c.id}`;
+        const diffMs       = c.created_at ? ahora - (c.created_at * 1000) : null;
+        const tiempoAbierta = diffMs !== null ? formatMsAge(diffMs) : '—';
+
+        return `<div class="conv-item">
+          <div class="conv-item-left">
+            <span class="conv-id">#${c.id}</span>
+            <span class="conv-contact">${c.contact_name}</span>
+          </div>
+          <div class="conv-item-right">
+            <span class="conv-age">🕐 ${tiempoAbierta}</span>
+            <a class="conv-link" href="${convUrl}" target="_blank" rel="noopener">Abrir ↗</a>
+          </div>
+        </div>`;
+      }).join('');
+
+    } catch(e) {
+      inner.innerHTML = `<div class="conv-empty" style="color:var(--red-text);">Error: ${e.message}</div>`;
+    }
+  }
+
+  /* ── Formatear edad de conversación ──────────────────────*/
+  function formatMsAge(ms) {
+    const mins  = Math.floor(ms / 60000);
+    const hours = Math.floor(mins / 60);
+    const days  = Math.floor(hours / 24);
+    if (days  > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${mins % 60}m`;
+    return `${mins}m`;
   }
 
 </script>
