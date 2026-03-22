@@ -851,17 +851,12 @@
     'Authorization': `Bearer ${SUPABASE_KEY}`
   };
 
-  /* ── Credenciales Chatwoot (asignación directa) ───────────*/
-  const CHATWOOT_URL     = 'https://naty.watiteam.com/api/v1/accounts/1';
-  const CHATWOOT_TOKEN   = 'Fc8HFdgFa6dnWpbBrveFGCQh'; // ← reemplazar con tu api_access_token
+  /* ── Webhook n8n (evita CORS — n8n tiene el token internamente) ──*/
+  const WEBHOOK_ASIGNAR  = 'https://hook.watiteam.com/webhook/naty-asignar';
+  const WEBHOOK_SECRET   = 'naty-2026-secret';
   const CHATWOOT_TEAM    = 20;
-  const MAX_OFFLINE_MINS  = 15;  // agentes offline > 15 min NO reciben chats
-  const OFFLINE_THRESHOLD = 5;   // agentes offline < 5 min se muestran como online (desconexión temporal)
-
-  const CW_HEADERS = {
-    'api_access_token': CHATWOOT_TOKEN,
-    'Content-Type': 'application/json'
-  };
+  const MAX_OFFLINE_MINS = 15;  // agentes offline > 15 min NO reciben chats en asignación
+  const OFFLINE_THRESHOLD = 5;  // agentes offline < 5 min se muestran como online
 
   let previousStates = {};
   let convMap        = {};
@@ -1186,72 +1181,52 @@
     statusEl.style.display = 'none';
 
     try {
-      // ── 1. Traer conversaciones sin asignar del equipo ────
-      const convRes = await fetch(
-        `${CHATWOOT_URL}/conversations?team_id=${CHATWOOT_TEAM}&assignee_type=unassigned&page=1`,
-        { headers: CW_HEADERS }
-      );
-
-      if (!convRes.ok) throw new Error(`Chatwoot API error: ${convRes.status}`);
-
-      const convData   = await convRes.json();
-      const unassigned = convData?.data?.payload || convData?.payload || [];
-
-      if (unassigned.length === 0) {
-        showAssignStatus('success', '✅ No hay conversaciones sin asignar.');
+      if (agentSnapshot.length === 0) {
+        showAssignStatus('warn', '⚠️ Esperando datos de agentes, intenta de nuevo.');
         return;
       }
 
-      // ── 2. Filtrar agentes elegibles ──────────────────────
-      const elegibles = agentSnapshot.filter(a => {
-        if (a.estado === 'online') return true;
-        if (a.estado === 'offline' && (a.tiempo_desconectado_minutos || 0) <= MAX_OFFLINE_MINS) return true;
-        return false;
+      // Enviar agentes + secreto al webhook de n8n.
+      // n8n busca las conversaciones sin asignar internamente (sin CORS).
+      const payload = {
+        secret: WEBHOOK_SECRET,
+        agentes: agentSnapshot.map(a => ({
+          id_agente:                   a.id_agente,
+          nombre:                      a.nombre,
+          estado:                      a.estado,
+          tiempo_desconectado_minutos: a.tiempo_desconectado_minutos || 0,
+          total_conversaciones:        a.total_conversaciones        || 0
+        }))
+      };
+
+      const wRes = await fetch(WEBHOOK_ASIGNAR, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
       });
 
-      if (elegibles.length === 0) {
-        showAssignStatus('warn', '⚠️ Sin agentes disponibles. Todos offline por más de 15 min.');
-        return;
+      if (!wRes.ok) throw new Error(`Webhook error ${wRes.status}`);
+
+      const result = await wRes.json();
+
+      if (result.motivo === 'secreto_invalido') {
+        showAssignStatus('error', '❌ Acceso no autorizado.');
+      } else if (result.motivo === 'sin_agentes') {
+        showAssignStatus('warn', '⚠️ Sin agentes disponibles. Todos offline > 15 min.');
+      } else if (result.motivo === 'sin_conversaciones') {
+        showAssignStatus('success', '✅ No hay conversaciones sin asignar.');
+      } else {
+        const { ok = 0, fail = 0 } = result;
+        const msg = fail === 0
+          ? `✅ ${ok} conversación${ok !== 1 ? 'es' : ''} asignada${ok !== 1 ? 's' : ''}.`
+          : `⚠️ ${ok} asignadas, ${fail} con error.`;
+        showAssignStatus(fail === 0 ? 'success' : 'warn', msg);
       }
 
-      // ── 3. Round-robin ponderado ──────────────────────────
-      // Copia mutable de la carga actual para re-ordenar en cada paso
-      const carga = elegibles.map(a => ({
-        id:     a.id_agente,
-        nombre: a.nombre,
-        chats:  a.total_conversaciones || 0
-      }));
-
-      let ok = 0, fail = 0;
-
-      for (const conv of unassigned) {
-        // El de menos chats recibe el siguiente
-        carga.sort((a, b) => a.chats - b.chats);
-        const agente = carga[0];
-
-        try {
-          const res = await fetch(
-            `${CHATWOOT_URL}/conversations/${conv.id}/assignments`,
-            {
-              method:  'POST',
-              headers: CW_HEADERS,
-              body:    JSON.stringify({ assignee_id: agente.id })
-            }
-          );
-          if (res.ok) { agente.chats++; ok++; }
-          else fail++;
-        } catch { fail++; }
-      }
-
-      // ── 4. Mostrar resultado y refrescar ──────────────────
-      const msg = fail === 0
-        ? `✅ ${ok} conversación${ok !== 1 ? 'es' : ''} asignada${ok !== 1 ? 's' : ''}.`
-        : `⚠️ ${ok} asignadas, ${fail} con error.`;
-      showAssignStatus(fail === 0 ? 'success' : 'warn', msg);
       setTimeout(fetchAll, 1500);
 
     } catch (e) {
-      showAssignStatus('error', `❌ Error: ${e.message}`);
+      showAssignStatus('error', `❌ ${e.message}`);
     } finally {
       btn.disabled    = false;
       btn.textContent = '⚡ Asignar conversaciones';
