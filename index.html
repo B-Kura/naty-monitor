@@ -396,6 +396,101 @@
   html[data-theme="dark"] .last-change-wrap.new-change { animation: flashChangeDark 2s ease; }
   html[data-theme="light"] .last-change-wrap.new-change { animation: flashChangeLight 2s ease; }
 
+  /* ── Botón y panel de historial ───────────────────────────*/
+  .history-toggle-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+  @media (min-width: 481px) { .history-toggle-wrap { width: auto; margin-top: 0; } }
+
+  .history-toggle-btn {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 600;
+    padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-card); color: var(--text-muted);
+    cursor: pointer; white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .history-toggle-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+  .history-toggle-btn.open  { background: var(--blue-bg); color: var(--blue-text); border-color: var(--blue-border); }
+
+  .history-count-badge {
+    background: var(--blue-bg); color: var(--blue-text);
+    border: 1px solid var(--blue-border);
+    border-radius: 20px; padding: 1px 7px;
+    font-size: 11px; font-weight: 700;
+    min-width: 20px; text-align: center;
+  }
+
+  .history-panel {
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease;
+  }
+  @media (min-width: 769px) { .history-panel { border-radius: 14px; margin-bottom: 28px; } }
+
+  .history-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-light);
+    background: rgba(0,0,0,0.02);
+  }
+  @media (min-width: 769px) { .history-header { padding: 16px 28px; } }
+
+  .history-title { font-size: 14px; font-weight: 600; color: var(--text-title); }
+
+  .history-clear-btn {
+    font-size: 12px; font-weight: 600; padding: 4px 12px;
+    border-radius: 8px; border: 1px solid var(--border-main);
+    background: var(--bg-card); color: var(--text-muted);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .history-clear-btn:hover { background: var(--red-card); color: var(--red-text); border-color: var(--red-border); }
+
+  .history-list { display: flex; flex-direction: column; max-height: 380px; overflow-y: auto; }
+
+  .history-empty {
+    padding: 24px; text-align: center;
+    font-size: 13px; color: var(--text-dark);
+  }
+
+  .history-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.2s;
+    animation: fadeIn 0.3s ease;
+  }
+  @media (min-width: 769px) { .history-item { padding: 13px 28px; } }
+  .history-item:last-child { border-bottom: none; }
+  .history-item:hover { background: var(--bg-hover); }
+
+  .history-item-icon {
+    font-size: 18px; flex-shrink: 0;
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .history-item-body { flex: 1; min-width: 0; }
+  .history-item-title { font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 2px; }
+  .history-item-sub   { font-size: 12px; color: var(--text-muted); }
+
+  .history-item-time {
+    font-size: 11px; color: var(--text-dark);
+    font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* Colores por tipo de evento */
+  .hev-offline .history-item-icon { background: var(--red-bg); }
+  .hev-online  .history-item-icon { background: var(--green-bg); }
+  .hev-assign  .history-item-icon { background: var(--blue-bg); }
+  .hev-alert   .history-item-icon { background: var(--amber-bg); }
+
   /* ── Tabla de agentes ─────────────────────────────────────*/
   .table-wrap {
     border-radius: 14px;
@@ -636,6 +731,62 @@
   }
   .conv-link:hover { opacity: 0.85; transform: translateY(-1px); }
 
+  /* ── Panel de reasignación ────────────────────────────────*/
+  .btn-reassign-toggle {
+    font-size: 12px; font-weight: 600;
+    padding: 5px 11px; border-radius: 8px;
+    border: 1px solid var(--blue-border);
+    background: var(--blue-bg); color: var(--blue-text);
+    cursor: pointer; white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .btn-reassign-toggle:hover { opacity: 0.85; transform: translateY(-1px); }
+
+  .reassign-panel {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 0 4px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .reassign-select {
+    flex: 1; min-width: 180px;
+    padding: 7px 12px; border-radius: 8px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-main); color: var(--text-main);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+  }
+  .reassign-select:focus { outline: none; border-color: var(--blue-text); }
+
+  .btn-reassign-confirm {
+    font-size: 12px; font-weight: 700;
+    padding: 7px 16px; border-radius: 8px;
+    border: none;
+    background: var(--green-card); color: var(--green-text);
+    border: 1px solid var(--green-border);
+    cursor: pointer; white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .btn-reassign-confirm:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+  .btn-reassign-confirm:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-reassign-cancel {
+    font-size: 13px; font-weight: 700;
+    padding: 7px 11px; border-radius: 8px;
+    border: 1px solid var(--border-main);
+    background: var(--bg-card); color: var(--text-muted);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-reassign-cancel:hover { background: var(--red-card); color: var(--red-text); border-color: var(--red-border); }
+
+  .reassign-status {
+    font-size: 12px; font-weight: 600;
+  }
+
   /* ── DB Cruda ─────────────────────────────────────────────*/
   .raw-header {
     display: flex; align-items: center;
@@ -746,6 +897,7 @@
   </div>
   <div class="header-right">
     <button class="theme-switch" id="theme-btn" onclick="toggleTheme()">☀️ Modo Claro</button>
+    <button class="theme-switch" id="notif-btn" onclick="requestNotifPermission()" title="Activar notificaciones de escritorio">🔔 Notificaciones</button>
     <span id="last-update">Cargando...</span>
     <span id="clock"></span>
   </div>
@@ -812,13 +964,31 @@
     <span id="last-change-emoji">⏳</span>
   </div>
   <div class="last-change-info">
-    <div class="last-change-label">Último cambio detectado</div>
-    <div class="last-change-name" id="last-change-name">Esperando primer cambio...</div>
-    <div class="last-change-detail" id="last-change-detail">El panel se actualizará al detectar un cambio de estado</div>
+    <div class="last-change-label">Último evento</div>
+    <div class="last-change-name" id="last-change-name">Esperando primer evento...</div>
+    <div class="last-change-detail" id="last-change-detail">El panel se actualizará al detectar cambios</div>
   </div>
   <div class="last-change-time">
-    <div class="time-label">Hora del cambio</div>
+    <div class="time-label">Hora</div>
     <div class="time-value" id="last-change-time">—</div>
+  </div>
+
+  <!-- Botón historial -->
+  <div class="history-toggle-wrap">
+    <button class="history-toggle-btn" id="history-toggle-btn" onclick="toggleHistory()">
+      📋 Historial <span id="history-count" class="history-count-badge">0</span>
+    </button>
+  </div>
+</div>
+
+<!-- Lista desplegable de últimos 20 eventos -->
+<div class="history-panel glass-panel" id="history-panel" style="display:none;">
+  <div class="history-header">
+    <span class="history-title">📋 Historial de eventos</span>
+    <button class="history-clear-btn" onclick="clearHistory()">Limpiar</button>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-empty">Sin eventos registrados aún</div>
   </div>
 </div>
 
@@ -914,6 +1084,58 @@
 
   initTheme();
 
+  /* ── Notificaciones de escritorio ─────────────────────────
+     Solo para el evento crítico: sin asignar > 15 min.
+     El botón del header solicita permiso al navegador.
+     Una vez concedido se oculta y queda activo en sesión.
+  ───────────────────────────────────────────────────────── */
+  function initNotifButton() {
+    const btn = document.getElementById('notif-btn');
+    if (!('Notification' in window)) {
+      btn.style.display = 'none'; // navegador no soporta
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      btn.innerHTML   = '🔔 Activas';
+      btn.style.color = 'var(--green-text)';
+      btn.style.borderColor = 'var(--green-border)';
+      btn.disabled    = true;
+    } else if (Notification.permission === 'denied') {
+      btn.innerHTML   = '🔕 Bloqueadas';
+      btn.style.color = 'var(--red-text)';
+      btn.disabled    = true;
+    }
+  }
+
+  async function requestNotifPermission() {
+    if (!('Notification' in window)) return;
+    const result = await Notification.requestPermission();
+    initNotifButton();
+    if (result === 'granted') {
+      // Notificación de prueba para confirmar que funciona
+      sendNotification(
+        '🔔 Notificaciones activas',
+        'Recibirás alertas cuando haya conversaciones sin asignar por más de 15 min.'
+      );
+    }
+  }
+
+  function sendNotification(title, body) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      new Notification(title, {
+        body,
+        icon: 'https://naty.watiteam.com/favicon.ico',
+        badge: 'https://naty.watiteam.com/favicon.ico',
+        tag:  'naty-monitor' // evita apilar múltiples notifs del mismo tipo
+      });
+    } catch(e) {
+      console.warn('Notificación fallida:', e.message);
+    }
+  }
+
+  initNotifButton();
+
   /* ── Credenciales Supabase ────────────────────────────────*/
   const SUPABASE_URL = 'https://yzhlaypunmtfokbblpxt.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6aGxheXB1bm10Zm9rYmJscHh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNDkyMTYsImV4cCI6MjA4ODgyNTIxNn0.CSK39wZBY7hgLByD5RK92jFc6QzoBHSzLN3EpdPPo3o';
@@ -924,9 +1146,10 @@
   };
 
   /* ── Webhook n8n (evita CORS — n8n tiene el token internamente) ──*/
-  const WEBHOOK_ASIGNAR  = 'https://hook.watiteam.com/webhook/naty-asignar';
-  const WEBHOOK_CONVS    = 'https://hook.watiteam.com/webhook/naty-convs-agente';
-  const WEBHOOK_SECRET   = 'naty-2026-secret';
+  const WEBHOOK_ASIGNAR   = 'https://hook.watiteam.com/webhook/naty-asignar';
+  const WEBHOOK_CONVS     = 'https://hook.watiteam.com/webhook/naty-convs-agente';
+  const WEBHOOK_REASIGNAR = 'https://hook.watiteam.com/webhook/naty-reasignar';
+  const WEBHOOK_SECRET    = 'naty-2026-secret';
   const CHATWOOT_BASE    = 'https://naty.watiteam.com';
   const CHATWOOT_TEAM    = 20;
   const MAX_OFFLINE_MINS = 15;
@@ -939,7 +1162,10 @@
   let activeFilter    = 'all';
   let activeSort      = 'estado';
   let sortDir         = {};
-  let expandedAgents  = new Set(); // IDs de agentes con fila expandida
+  let expandedAgents  = new Set();
+  let eventHistory    = [];          // hasta 20 eventos
+  let unassignedSince = null;        // timestamp cuando unassigned > 0 por primera vez
+  const UNASSIGNED_ALERT_MINS = 15;  // alerta si sin asignar > 15 min
 
   function clock() {
     document.getElementById('clock').textContent =
@@ -987,26 +1213,81 @@
     return `${mins} min`;
   }
 
-  function updateLastChange(agent, type) {
-    const isOffline = type === 'went_offline';
-    const color  = isOffline ? 'var(--red-text)' : 'var(--green-text)';
-    const bgIcon = isOffline ? 'var(--red-bg)' : 'var(--green-bg)';
+  /* ── Registrar evento y actualizar tarjeta + historial ────*/
+  function pushEvent({ emoji, color, bgIcon, title, detail, type }) {
+    const hora = new Date().toLocaleTimeString('es-HN');
 
+    // Actualizar tarjeta grande
     document.getElementById('last-change-accent').style.background = color;
     document.getElementById('last-change-icon').style.background   = bgIcon;
-    document.getElementById('last-change-emoji').textContent       = isOffline ? '🔴' : '🟢';
-    document.getElementById('last-change-name').textContent        = agent.nombre;
-
-    const detail = document.getElementById('last-change-detail');
-    detail.textContent = isOffline ? 'Se desconectó — pasó a offline' : 'Se reconectó — volvió a online';
-    detail.style.color = color;
-
-    document.getElementById('last-change-time').textContent = new Date().toLocaleTimeString('es-HN');
+    document.getElementById('last-change-emoji').textContent       = emoji;
+    document.getElementById('last-change-name').textContent        = title;
+    const detailEl = document.getElementById('last-change-detail');
+    detailEl.textContent = detail;
+    detailEl.style.color = color;
+    document.getElementById('last-change-time').textContent = hora;
 
     const wrap = document.getElementById('last-change-wrap');
     wrap.classList.remove('new-change');
     void wrap.offsetWidth;
     wrap.classList.add('new-change');
+
+    // Agregar al historial (máx 20)
+    eventHistory.unshift({ emoji, color, bgIcon, title, detail, type, hora });
+    if (eventHistory.length > 20) eventHistory.pop();
+
+    renderHistory();
+  }
+
+  function updateLastChange(agent, type) {
+    const isOffline = type === 'went_offline';
+    pushEvent({
+      emoji:  isOffline ? '🔴' : '🟢',
+      color:  isOffline ? 'var(--red-text)'   : 'var(--green-text)',
+      bgIcon: isOffline ? 'var(--red-bg)'     : 'var(--green-bg)',
+      title:  agent.nombre,
+      detail: isOffline ? 'Se desconectó — pasó a offline' : 'Se reconectó — volvió a online',
+      type:   isOffline ? 'hev-offline' : 'hev-online'
+    });
+  }
+
+  /* ── Renderizar lista de historial ────────────────────────*/
+  function renderHistory() {
+    // Actualizar badge
+    document.getElementById('history-count').textContent = eventHistory.length;
+
+    const list = document.getElementById('history-list');
+    if (!list) return;
+
+    if (eventHistory.length === 0) {
+      list.innerHTML = `<div class="history-empty">Sin eventos registrados aún</div>`;
+      return;
+    }
+
+    list.innerHTML = eventHistory.map(ev => `
+      <div class="history-item ${ev.type}">
+        <div class="history-item-icon" style="background:${ev.bgIcon};">${ev.emoji}</div>
+        <div class="history-item-body">
+          <div class="history-item-title">${ev.title}</div>
+          <div class="history-item-sub">${ev.detail}</div>
+        </div>
+        <div class="history-item-time">${ev.hora}</div>
+      </div>`).join('');
+  }
+
+  /* ── Toggle panel historial ───────────────────────────────*/
+  function toggleHistory() {
+    const panel = document.getElementById('history-panel');
+    const btn   = document.getElementById('history-toggle-btn');
+    const open  = panel.style.display === 'none';
+    panel.style.display = open ? 'block' : 'none';
+    btn.classList.toggle('open', open);
+  }
+
+  /* ── Limpiar historial ────────────────────────────────────*/
+  function clearHistory() {
+    eventHistory = [];
+    renderHistory();
   }
 
   async function fetchConversations() {
@@ -1033,6 +1314,30 @@
       animateValue(document.getElementById('chat-total'),      allCount        ?? '—');
       animateValue(document.getElementById('chat-assigned'),   assignedCount   ?? '—');
       animateValue(document.getElementById('chat-unassigned'), unassignedCount ?? '—');
+
+      // ── Alerta si hay sin asignar por más de 15 min ────────
+      const ahora = Date.now();
+      if (unassignedCount > 0) {
+        if (!unassignedSince) unassignedSince = ahora;
+        const minsPendiente = Math.floor((ahora - unassignedSince) / 60000);
+        if (minsPendiente >= UNASSIGNED_ALERT_MINS) {
+          pushEvent({
+            emoji:  '⏳',
+            color:  'var(--amber-text)',
+            bgIcon: 'var(--amber-bg)',
+            title:  `${unassignedCount} conversación${unassignedCount !== 1 ? 'es' : ''} sin asignar`,
+            detail: `Llevan más de ${minsPendiente} min esperando asignación`,
+            type:   'hev-alert'
+          });
+          sendNotification(
+            `⏳ ${unassignedCount} conversación${unassignedCount !== 1 ? 'es' : ''} sin asignar`,
+            `Llevan más de ${minsPendiente} minutos esperando asignación en el equipo Naty.`
+          );
+          unassignedSince = ahora; // resetear para no repetir cada ciclo
+        }
+      } else {
+        unassignedSince = null; // se asignaron todas, resetear
+      }
 
     } catch(e) {
       console.warn('Error leyendo conversaciones:', e.message);
@@ -1319,6 +1624,18 @@
           ? `✅ ${ok} conversación${ok !== 1 ? 'es' : ''} asignada${ok !== 1 ? 's' : ''}.`
           : `⚠️ ${ok} asignadas, ${fail} con error.`;
         showAssignStatus(fail === 0 ? 'success' : 'warn', msg);
+
+        // Registrar en historial si hubo asignaciones
+        if (ok > 0) {
+          pushEvent({
+            emoji:  '⚡',
+            color:  'var(--blue-text)',
+            bgIcon: 'var(--blue-bg)',
+            title:  `${ok} conversación${ok !== 1 ? 'es' : ''} asignada${ok !== 1 ? 's' : ''}`,
+            detail: fail > 0 ? `${fail} con error` : 'Asignación automática completada',
+            type:   'hev-assign'
+          });
+        }
       }
 
       setTimeout(fetchAll, 1500);
@@ -1373,12 +1690,23 @@
 
       const ahora = Date.now();
 
+      // Opciones de agentes para el dropdown (todos los del snapshot)
+      const agentOpts = agentSnapshot
+        .filter(a => a.id_agente !== agentId)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+        .map(a => {
+          const isOnline = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
+          const dot = isOnline ? '🟢' : '🔴';
+          const chats = a.total_conversaciones || 0;
+          return `<option value="${a.id_agente}" data-nombre="${a.nombre}">${dot} ${a.nombre} (${chats} chats)</option>`;
+        }).join('');
+
       inner.innerHTML = convs.map(c => {
-        const convUrl      = `${CHATWOOT_BASE}/app/accounts/1/team/${CHATWOOT_TEAM}/conversations/${c.id}`;
-        const diffMs       = c.created_at ? ahora - (c.created_at * 1000) : null;
+        const convUrl       = `${CHATWOOT_BASE}/app/accounts/1/team/${CHATWOOT_TEAM}/conversations/${c.id}`;
+        const diffMs        = c.created_at ? ahora - (c.created_at * 1000) : null;
         const tiempoAbierta = diffMs !== null ? formatMsAge(diffMs) : '—';
 
-        return `<div class="conv-item">
+        return `<div class="conv-item" id="conv-item-${c.id}">
           <div class="conv-item-left">
             <span class="conv-id">#${c.id}</span>
             <span class="conv-contact">${c.contact_name}</span>
@@ -1386,12 +1714,110 @@
           <div class="conv-item-right">
             <span class="conv-age">🕐 ${tiempoAbierta}</span>
             <a class="conv-link" href="${convUrl}" target="_blank" rel="noopener">Abrir ↗</a>
+            <button class="btn-reassign-toggle" onclick="toggleReassignPanel(${c.id})" title="Reasignar conversación">
+              🔄 Reasignar
+            </button>
+          </div>
+          <!-- Panel de reasignación (oculto por defecto) -->
+          <div class="reassign-panel" id="reassign-panel-${c.id}" style="display:none;">
+            <select class="reassign-select" id="reassign-select-${c.id}">
+              <option value="">— Seleccionar agente —</option>
+              ${agentOpts}
+            </select>
+            <button class="btn-reassign-confirm" onclick="confirmReassign(${c.id}, ${agentId})">
+              ✅ Confirmar
+            </button>
+            <button class="btn-reassign-cancel" onclick="toggleReassignPanel(${c.id})">
+              ✕
+            </button>
+            <span class="reassign-status" id="reassign-status-${c.id}"></span>
           </div>
         </div>`;
       }).join('');
 
     } catch(e) {
       inner.innerHTML = `<div class="conv-empty" style="color:var(--red-text);">Error: ${e.message}</div>`;
+    }
+  }
+
+  /* ── Toggle panel de reasignación ────────────────────────*/
+  function toggleReassignPanel(convId) {
+    const panel = document.getElementById(`reassign-panel-${convId}`);
+    if (!panel) return;
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'flex';
+    if (!isOpen) document.getElementById(`reassign-select-${convId}`)?.focus();
+  }
+
+  /* ── Confirmar reasignación ───────────────────────────────*/
+  async function confirmReassign(convId, fromAgentId) {
+    const select     = document.getElementById(`reassign-select-${convId}`);
+    const statusEl   = document.getElementById(`reassign-status-${convId}`);
+    const confirmBtn = select?.closest('.reassign-panel')?.querySelector('.btn-reassign-confirm');
+
+    const agentId    = parseInt(select?.value);
+    const agentNombre = select?.options[select.selectedIndex]?.dataset.nombre || '';
+
+    if (!agentId) {
+      statusEl.textContent  = '⚠️ Selecciona un agente';
+      statusEl.style.color  = 'var(--amber-text)';
+      return;
+    }
+
+    confirmBtn.disabled   = true;
+    confirmBtn.textContent = '⏳';
+    statusEl.textContent   = '';
+
+    try {
+      const res = await fetch(WEBHOOK_REASIGNAR, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          secret:        WEBHOOK_SECRET,
+          conv_id:       convId,
+          agent_id:      agentId,
+          agent_nombre:  agentNombre
+        })
+      });
+
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const result = await res.json();
+
+      if (result.ok) {
+        // Marcar visualmente la conv como reasignada
+        const convItem = document.getElementById(`conv-item-${convId}`);
+        if (convItem) {
+          convItem.style.opacity   = '0.45';
+          convItem.style.pointerEvents = 'none';
+        }
+        statusEl.textContent = `✅ Asignado a ${agentNombre}`;
+        statusEl.style.color = 'var(--green-text)';
+
+        // Registrar en historial
+        pushEvent({
+          emoji:  '🔄',
+          color:  'var(--blue-text)',
+          bgIcon: 'var(--blue-bg)',
+          title:  `Conv #${convId} reasignada`,
+          detail: `Asignada a ${agentNombre}`,
+          type:   'hev-assign'
+        });
+
+        // Refrescar tabla tras 1.5s
+        setTimeout(() => {
+          expandedAgents.delete(fromAgentId);
+          fetchAll();
+        }, 1500);
+
+      } else {
+        throw new Error(result.motivo || 'Error desconocido');
+      }
+
+    } catch(e) {
+      statusEl.textContent = `❌ ${e.message}`;
+      statusEl.style.color = 'var(--red-text)';
+      confirmBtn.disabled   = false;
+      confirmBtn.textContent = '✅ Confirmar';
     }
   }
 
