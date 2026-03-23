@@ -527,14 +527,34 @@
     background: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border-light);
   }
 
-  .refresh-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-dark); }
-
-  .refresh-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--green-text); opacity: 0; transition: opacity 0.3s;
+  /* ── Animación del Temporizador Circular ──────────────────*/
+  .refresh-indicator {
+    display: flex; align-items: center; gap: 8px;
   }
-
-  .refresh-dot.active { opacity: 1; box-shadow: 0 0 8px var(--green-text); }
+  .refresh-indicator span {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+  }
+  .circular-timer {
+    position: relative; width: 28px; height: 28px;
+  }
+  .circular-timer svg {
+    transform: rotate(-90deg); width: 100%; height: 100%;
+  }
+  .circular-timer path {
+    fill: none; stroke-width: 3.5; stroke-linecap: round;
+  }
+  .circular-timer .bg {
+    stroke: var(--border-light);
+  }
+  .circular-timer .progress {
+    stroke: var(--blue-text);
+    transition: stroke-dasharray 1s linear, stroke 0.5s ease;
+  }
+  .circular-timer .time {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums;
+  }
 
   table { width: 100%; border-collapse: collapse; }
 
@@ -970,6 +990,17 @@
     font-size: 16px;
     padding: 10px 18px;
   }
+  
+  /* Escalar el temporizador en Modo TV */
+  body.tv-mode .refresh-indicator span {
+    font-size: 18px;
+  }
+  body.tv-mode .circular-timer {
+    width: 44px; height: 44px;
+  }
+  body.tv-mode .circular-timer .time {
+    font-size: 16px;
+  }
 
   /* Botón flotante para salir de Modo TV */
   #exit-tv-btn {
@@ -1112,11 +1143,20 @@
       <span class="table-title">Estado de agentes</span>
       <span class="badge" id="total-badge">— agentes</span>
     </div>
+    
+    <!-- Nuevo Temporizador Visual -->
     <div class="refresh-indicator">
-      <div class="refresh-dot" id="refresh-dot"></div>
-      <span>Cada 15s</span>
+      <span>Próxima act.</span>
+      <div class="circular-timer">
+        <svg viewBox="0 0 36 36">
+          <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          <path class="progress" id="refresh-circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+        </svg>
+        <div class="time" id="refresh-time">10</div>
+      </div>
     </div>
   </div>
+  
   <div class="filter-bar">
     <div class="filter-group">
       <button class="filter-chip active" data-filter="all"     onclick="setFilter('all')">Todos</button>
@@ -1260,7 +1300,7 @@
     }
   }
 
-  // Corrección: Sincronizar el modo TV si el usuario presiona la tecla ESC para salir
+  // Sincronizar el modo TV si el usuario presiona la tecla ESC para salir
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
       document.body.classList.remove('tv-mode');
@@ -1602,10 +1642,6 @@
 
       const data = await res.json();
 
-      const dot = document.getElementById('refresh-dot');
-      dot.classList.add('active');
-      setTimeout(() => dot.classList.remove('active'), 800);
-
       let changeDetected = false;
       for (const agent of data) {
         if (agent.id_agente === 0) continue;
@@ -1769,12 +1805,63 @@
     renderTable();
   }
 
-  async function fetchAll() {
-    await Promise.all([fetchConversations(), fetchAgents()]);
+  /* ── Lógica del Temporizador Circular Sincronizado ────────*/
+  let countdown = 10;
+  let countdownInterval;
+
+  function updateTimerUI() {
+    const timeEl = document.getElementById('refresh-time');
+    const circle = document.getElementById('refresh-circle');
+    
+    if(timeEl) timeEl.textContent = countdown;
+    
+    // Calcular porcentaje de llenado (100 a 0)
+    const pct = (countdown / 10) * 100;
+    if(circle) {
+      circle.style.strokeDasharray = `${pct}, 100`;
+      
+      // Cambiar color progresivamente
+      if (countdown <= 3) {
+        circle.style.stroke = 'var(--red-text)';
+      } else if (countdown <= 6) {
+        circle.style.stroke = 'var(--amber-text)';
+      } else {
+        circle.style.stroke = 'var(--blue-text)';
+      }
+    }
   }
 
+  async function fetchAll() {
+    // Al pedir datos, reiniciamos el temporizador a 10s y actualizamos UI
+    countdown = 10;
+    updateTimerUI();
+    
+    await Promise.all([fetchConversations(), fetchAgents()]);
+    
+    // Si la DB cruda está visible, la sincronizamos con este mismo ciclo
+    const rawSection = document.getElementById('raw-section');
+    if (rawSection && rawSection.style.display !== 'none') {
+      fetchRaw();
+    }
+  }
+
+  function startTimer() {
+    updateTimerUI(); // Update UI de inicio
+    
+    if (countdownInterval) clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        fetchAll(); // Esto reinicia el counter a 10 de nuevo
+      } else {
+        updateTimerUI();
+      }
+    }, 1000);
+  }
+
+  // Inicializar todo
   fetchAll();
-  setInterval(fetchAll, 15000);
+  startTimer();
 
   function toggleRaw() {
     const section = document.getElementById('raw-section');
@@ -1819,8 +1906,6 @@
       tbody.innerHTML = `<tr><td colspan="7" style="padding:20px; color:var(--red-text); text-align:center; font-weight:600;">Error: ${e.message}</td></tr>`;
     }
   }
-
-  setInterval(fetchRaw, 15000);
 
   /* ══════════════════════════════════════════════════════════
      ASIGNACIÓN AUTOMÁTICA DE CONVERSACIONES SIN ASIGNAR
