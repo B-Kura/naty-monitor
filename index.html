@@ -176,8 +176,8 @@
   #clock { font-size: 14px; font-weight: 500; color: var(--text-muted); font-variant-numeric: tabular-nums; }
   #last-update { font-size: 12px; color: var(--text-dark); }
 
-  /* Botón Toggle Tema */
-  .theme-switch {
+  /* Botones de Control */
+  .theme-switch, .control-btn {
     background: var(--bg-card);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -194,7 +194,7 @@
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   }
-  .theme-switch:hover { 
+  .theme-switch:hover, .control-btn:hover { 
     background: var(--bg-hover); 
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.1);
@@ -917,6 +917,87 @@
     color: var(--red-text);
     border-color: var(--red-border);
   }
+
+  /* ── Estilos Modo TV (Pantalla Completa) ──────────────────*/
+  body.tv-mode {
+    padding: 10px;
+  }
+  body.tv-mode header,
+  body.tv-mode #last-change-wrap,
+  body.tv-mode #bottom-sections,
+  body.tv-mode .filter-bar,
+  body.tv-mode .btn-expand,
+  body.tv-mode .bar-col,
+  body.tv-mode .bar-th {
+    display: none !important;
+  }
+  body.tv-mode .chat-counters {
+    margin-bottom: 15px;
+  }
+  body.tv-mode .counters {
+    margin-bottom: 20px;
+  }
+  body.tv-mode .table-wrap {
+    margin-bottom: 0;
+  }
+  body.tv-mode table {
+    font-size: 20px; /* Aumentar para lectura en pared */
+  }
+  body.tv-mode td, body.tv-mode th {
+    padding: 16px 25px;
+  }
+  body.tv-mode .chat-badge {
+    font-size: 18px;
+    padding: 4px 14px;
+  }
+  body.tv-mode .agent-name {
+    font-size: 24px;
+  }
+  body.tv-mode .counter-value {
+    font-size: 48px;
+  }
+  body.tv-mode .chat-card-value {
+    font-size: 38px;
+  }
+  
+  /* Escalar el botón de asignar en Modo TV */
+  body.tv-mode .btn-assign {
+    font-size: 18px;
+    padding: 14px 28px;
+    border-radius: 12px;
+  }
+  body.tv-mode .assign-status {
+    font-size: 16px;
+    padding: 10px 18px;
+  }
+
+  /* Botón flotante para salir de Modo TV */
+  #exit-tv-btn {
+    display: none;
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    padding: 12px 28px;
+    border-radius: 30px;
+    background: rgba(225, 29, 72, 0.15); /* Translúcido por defecto */
+    color: var(--red-text);
+    border: 1px solid rgba(225, 29, 72, 0.3);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    opacity: 0.4; /* Opacidad baja para no estorbar la lectura */
+  }
+  #exit-tv-btn:hover {
+    opacity: 1;
+    background: var(--red-card);
+    border-color: var(--red-border);
+    transform: translateX(-50%) translateY(-2px);
+  }
 </style>
 </head>
 <body>
@@ -927,6 +1008,8 @@
     <h1>Monitoreo de agentes — Naty</h1>
   </div>
   <div class="header-right">
+    <button class="control-btn" id="sound-btn" onclick="toggleSound()">🔇 Sonido Off</button>
+    <button class="control-btn" id="tv-btn" onclick="toggleTvMode()">📺 Modo TV</button>
     <button class="theme-switch" id="theme-btn" onclick="toggleTheme()">☀️ Modo Claro</button>
     <button class="theme-switch" id="notif-btn" onclick="requestNotifPermission()" title="Activar notificaciones de escritorio">🔔 Notificaciones</button>
     <span id="last-update">Cargando...</span>
@@ -1056,7 +1139,8 @@
   </div>
 </div>
 
-<div style="margin-top:16px; padding-bottom:40px;">
+<!-- Envolvemos las secciones secundarias para ocultarlas fácil en modo TV -->
+<div id="bottom-sections" style="margin-top:16px; padding-bottom:40px;">
 
   <!-- ── Agentes en llamadas ───────────────────────────────-->
   <div class="raw-header" style="margin-bottom:12px;">
@@ -1123,6 +1207,11 @@
   </div>
 </div>
 
+<!-- Botón flotante para salir de Modo TV -->
+<button id="exit-tv-btn" onclick="toggleTvMode()">
+  ❌ Salir de Modo TV
+</button>
+
 <script>
   /* ── Lógica del Tema Claro/Oscuro ─────────────────────────*/
   function initTheme() {
@@ -1154,11 +1243,87 @@
 
   initTheme();
 
-  /* ── Notificaciones de escritorio ─────────────────────────
-     Solo para el evento crítico: sin asignar > 15 min.
-     El botón del header solicita permiso al navegador.
-     Una vez concedido se oculta y queda activo en sesión.
-  ───────────────────────────────────────────────────────── */
+  /* ── Modo TV (Pantalla Completa) ──────────────────────────*/
+  function toggleTvMode() {
+    const isTv = document.body.classList.toggle('tv-mode');
+    document.getElementById('exit-tv-btn').style.display = isTv ? 'block' : 'none';
+    
+    // Activar o desactivar Fullscreen nativo del navegador
+    if (isTv) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(err => console.log(err));
+      }
+    } else {
+      if (document.exitFullscreen && document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.log(err));
+      }
+    }
+  }
+
+  // Corrección: Sincronizar el modo TV si el usuario presiona la tecla ESC para salir
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      document.body.classList.remove('tv-mode');
+      document.getElementById('exit-tv-btn').style.display = 'none';
+    }
+  });
+
+  /* ── Sonido de Alerta (Web Audio API) ─────────────────────*/
+  let soundEnabled = false;
+  let audioCtx = null;
+  let lastHighLoadBeep = 0; // Para no sonar cada 15s indefinidamente
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('sound-btn');
+    btn.innerHTML = soundEnabled ? '🔊 Sonido On' : '🔇 Sonido Off';
+    btn.style.color = soundEnabled ? 'var(--green-text)' : 'var(--blue-text)';
+    btn.style.borderColor = soundEnabled ? 'var(--green-border)' : '';
+    
+    if (soundEnabled) {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      playBeep(true); // Reproducir muy bajito para inicializar contexto en click
+    }
+  }
+
+  function playBeep(isTest = false) {
+    if (!soundEnabled) return;
+    try {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      // Doble beep de alerta
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Pitch alto (A5)
+      
+      const vol = isTest ? 0.001 : 0.15; // Volumen suave, apenas perceptible si es test
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      // Primer beep
+      gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.05);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+      // Segundo beep
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + 0.2);
+      gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.25);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.35);
+
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.4);
+    } catch(e) {
+      console.warn("Error reproduciendo audio", e);
+    }
+  }
+
+  /* ── Notificaciones de escritorio ─────────────────────────*/
   function initNotifButton() {
     const btn = document.getElementById('notif-btn');
     if (!('Notification' in window)) {
@@ -1182,7 +1347,6 @@
     const result = await Notification.requestPermission();
     initNotifButton();
     if (result === 'granted') {
-      // Notificación de prueba para confirmar que funciona
       sendNotification(
         '🔔 Notificaciones activas',
         'Recibirás alertas cuando haya conversaciones sin asignar por más de 15 min.'
@@ -1395,6 +1559,9 @@
         if (!unassignedSince) unassignedSince = ahora;
         const minsPendiente = Math.floor((ahora - unassignedSince) / 60000);
         if (minsPendiente >= UNASSIGNED_ALERT_MINS) {
+          
+          playBeep(); // Beep de alerta para chats sin asignar
+          
           pushEvent({
             emoji:  '⏳',
             color:  'var(--amber-text)',
@@ -1453,8 +1620,20 @@
         if (agent.id_agente !== 0) previousStates[agent.id_agente] = agent.estado;
       }
 
-      const agentes      = data.filter(a => a.id_agente !== 0);
+      const agentes = data.filter(a => a.id_agente !== 0);
       agentSnapshot = agentes;
+      
+      // Alerta Beep si hay algún agente sobrecargado (>= 8 chats)
+      const hasHighLoad = agentes.some(a => (a.total_conversaciones || 0) >= 8);
+      if (hasHighLoad) {
+        // Sonar máximo una vez cada 60s para no saturar 
+        if (Date.now() - lastHighLoadBeep > 60000) {
+          playBeep();
+          lastHighLoadBeep = Date.now();
+        }
+      } else {
+        lastHighLoadBeep = 0; // Resetear si ya nadie tiene carga alta
+      }
 
       // Threshold: offline < 5 min se cuenta como online
       const onlineCount  = agentes.filter(a => a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD)).length;
