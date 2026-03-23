@@ -493,8 +493,7 @@
 
   .history-day-header {
     padding: 8px 20px 6px;
-    font-size: 11px; font-weight: 700;
-    color: var(--text-dark);
+    font-size: 11px; font-weight: 700; color: var(--text-dark);
     text-transform: uppercase; letter-spacing: 1px;
     background: rgba(0,0,0,0.03);
     border-bottom: 1px solid var(--border-light);
@@ -798,6 +797,27 @@
     font-size: 12px; font-weight: 600;
   }
 
+  /* ── Chips de agentes en llamadas ────────────────────────*/
+  .llamada-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+    border: 1px solid var(--border-main);
+    background: var(--bg-card); color: var(--text-muted);
+    cursor: pointer; white-space: nowrap;
+    transition: all 0.2s ease; user-select: none;
+  }
+  .llamada-chip:hover { background: var(--bg-hover); transform: translateY(-1px); }
+  .llamada-chip.marcado {
+    background: var(--amber-bg); color: var(--amber-text);
+    border-color: var(--amber-border);
+  }
+  .llamada-chip .chip-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    background: var(--text-dark); transition: background 0.2s;
+  }
+  .llamada-chip.marcado .chip-dot { background: var(--amber-text); }
+
   /* ── DB Cruda ─────────────────────────────────────────────*/
   .raw-header {
     display: flex; align-items: center;
@@ -1038,8 +1058,26 @@
 
 <div style="margin-top:16px; padding-bottom:40px;">
 
-  <!-- ── Historial persistente (Supabase, 7 días) ─────────-->
+  <!-- ── Agentes en llamadas ───────────────────────────────-->
   <div class="raw-header" style="margin-bottom:12px;">
+    <div class="raw-title-row">
+      <span style="font-size:15px; font-weight:600; color:var(--text-title);">📞 Agentes en llamadas</span>
+      <span class="badge" id="llamadas-count-badge">0 marcados</span>
+    </div>
+    <button class="raw-toggle-btn" onclick="toggleLlamadas()" id="llamadas-toggle">Mostrar</button>
+  </div>
+  <div id="llamadas-section" style="display:none; margin-bottom:20px;">
+    <div class="glass-panel" style="border-radius:12px; overflow:hidden;">
+      <div style="padding:12px 20px; border-bottom:1px solid var(--border-light); background:rgba(0,0,0,0.02); font-size:12px; color:var(--text-muted);">
+        Los agentes marcados reciben máximo <strong style="color:var(--amber-text);">5 chats</strong> en la asignación automática. Los no marcados tienen prioridad (máximo 10). El marcado persiste hasta que lo quites manualmente.
+      </div>
+      <div id="llamadas-list" style="padding:12px 20px; display:flex; flex-wrap:wrap; gap:10px;">
+        <div style="color:var(--text-dark); font-size:13px; padding:8px 0;">Cargando agentes...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="raw-header" style="margin-bottom:12px; margin-top:20px;">
     <div class="raw-title-row">
       <span style="font-size:15px; font-weight:600; color:var(--text-title);">📅 Historial persistente</span>
       <span class="badge">últimos 7 días</span>
@@ -1195,6 +1233,10 @@
   let activeSort      = 'estado';
   let sortDir         = {};
   let expandedAgents  = new Set();
+  // IDs de agentes marcados como "en llamadas" — persiste en localStorage
+  let agentesEnLlamadas = new Set(
+    JSON.parse(localStorage.getItem('naty-llamadas') || '[]')
+  );
   let eventHistory    = [];          // hasta 20 eventos
   let unassignedSince = null;        // timestamp cuando unassigned > 0 por primera vez
   const UNASSIGNED_ALERT_MINS = 15;  // alerta si sin asignar > 15 min
@@ -1636,7 +1678,8 @@
           nombre:                      a.nombre,
           estado:                      a.estado,
           tiempo_desconectado_minutos: a.tiempo_desconectado_minutos || 0,
-          total_conversaciones:        a.total_conversaciones        || 0
+          total_conversaciones:        a.total_conversaciones        || 0,
+          en_llamadas:                 agentesEnLlamadas.has(a.id_agente)
         }))
       };
 
@@ -1821,7 +1864,7 @@
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const result = await res.json();
 
-      if (result.ok === true) {
+      if (result.ok) {
         // Marcar visualmente la conv como reasignada
         const convItem = document.getElementById(`conv-item-${convId}`);
         if (convItem) {
@@ -1860,33 +1903,71 @@
   }
 
   /* ── Formatear edad de conversación ──────────────────────*/
-  function formatMsAge(ms) {
-    const mins  = Math.floor(ms / 60000);
-    const hours = Math.floor(mins / 60);
-    const days  = Math.floor(hours / 24);
-    if (days  > 0) return `${days}d ${hours % 24}h`;
-    if (hours > 0) return `${hours}h ${mins % 60}m`;
-    return `${mins}m`;
+  /* ── Sección agentes en llamadas ─────────────────────────*/
+  function toggleLlamadas() {
+    const section = document.getElementById('llamadas-section');
+    const btn     = document.getElementById('llamadas-toggle');
+    const isOpen  = section.style.display !== 'none';
+    section.style.display = isOpen ? 'none' : 'block';
+    btn.textContent = isOpen ? 'Mostrar' : 'Ocultar';
+    btn.style.color = isOpen ? 'var(--text-muted)' : 'var(--blue-text)';
+    if (!isOpen) renderLlamadasList();
   }
 
-  /* ── Escribir evento en Supabase (alerta sin asignar) ─────
-     Los otros eventos (asignacion_auto, reasignacion) los
-     escribe directamente n8n desde los webhooks.
-     Solo la alerta viene del HTML porque no pasa por n8n.
-  ───────────────────────────────────────────────────────── */
+  function renderLlamadasList() {
+    const list = document.getElementById('llamadas-list');
+    const badge = document.getElementById('llamadas-count-badge');
+    if (!list) return;
+
+    if (!agentSnapshot.length) {
+      list.innerHTML = `<div style="color:var(--text-dark);font-size:13px;padding:8px 0;">
+        Espera a que carguen los datos...</div>`;
+      return;
+    }
+
+    badge.textContent = `${agentesEnLlamadas.size} marcado${agentesEnLlamadas.size !== 1 ? 's' : ''}`;
+
+    const sorted = [...agentSnapshot].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+    list.innerHTML = sorted.map(a => {
+      const marcado = agentesEnLlamadas.has(a.id_agente);
+      const isOnline = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
+      const dotColor = isOnline ? 'var(--green-text)' : 'var(--red-text)';
+      return `<button
+        class="llamada-chip ${marcado ? 'marcado' : ''}"
+        onclick="toggleAgenteLlamada(${a.id_agente})"
+        title="${marcado ? 'Quitar marca de llamadas' : 'Marcar como en llamadas'}">
+        <span class="chip-dot" style="background:${dotColor};"></span>
+        ${a.nombre}
+        ${marcado ? '📞' : ''}
+      </button>`;
+    }).join('');
+  }
+
+  function toggleAgenteLlamada(agentId) {
+    if (agentesEnLlamadas.has(agentId)) {
+      agentesEnLlamadas.delete(agentId);
+    } else {
+      agentesEnLlamadas.add(agentId);
+    }
+    // Persistir en localStorage
+    localStorage.setItem('naty-llamadas', JSON.stringify([...agentesEnLlamadas]));
+    renderLlamadasList();
+    // Actualizar badge del header
+    const badge = document.getElementById('llamadas-count-badge');
+    if (badge) badge.textContent = `${agentesEnLlamadas.size} marcado${agentesEnLlamadas.size !== 1 ? 's' : ''}`;
+  }
+
+  /* ── Escribir evento en Supabase (alerta sin asignar) ─────*/
   async function logEventToSupabase(tipo, emoji, titulo, detalle, metadata = {}) {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/naty_eventos`, {
         method:  'POST',
-        headers: {
-          ...HEADERS,
-          'Content-Type':  'application/json',
-          'Prefer':        'return=minimal'
-        },
+        headers: { ...HEADERS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({ tipo, emoji, titulo, detalle, metadata })
       });
     } catch(e) {
-      console.warn('Error guardando evento en Supabase:', e.message);
+      console.warn('Error guardando evento:', e.message);
     }
   }
 
@@ -1903,67 +1984,55 @@
 
   /* ── Leer historial de Supabase (últimos 7 días) ──────────*/
   async function fetchPersistentHistory() {
-    const list      = document.getElementById('persistent-history-list');
-    const countEl   = document.getElementById('persistent-history-count');
-    list.innerHTML  = `<div class="history-empty">Cargando...</div>`;
-
+    const list    = document.getElementById('persistent-history-list');
+    const countEl = document.getElementById('persistent-history-count');
+    list.innerHTML = `<div class="history-empty">Cargando...</div>`;
     try {
       const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const res   = await fetch(
         `${SUPABASE_URL}/rest/v1/naty_eventos?select=*&created_at=gte.${since}&order=created_at.desc&limit=100`,
         { headers: HEADERS }
       );
-
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const eventos = await res.json();
-
       countEl.textContent = `${eventos.length} evento${eventos.length !== 1 ? 's' : ''}`;
-
       if (eventos.length === 0) {
         list.innerHTML = `<div class="history-empty">Sin eventos en los últimos 7 días</div>`;
         return;
       }
-
-      // Agrupar por día
       const porDia = {};
       for (const ev of eventos) {
         const fecha = new Date(ev.created_at).toLocaleDateString('es-HN', { weekday: 'long', day: 'numeric', month: 'long' });
         if (!porDia[fecha]) porDia[fecha] = [];
         porDia[fecha].push(ev);
       }
-
-      const tipoClass = {
-        asignacion_auto: 'hev-assign',
-        reasignacion:    'hev-assign',
-        alerta_sin_asignar: 'hev-alert'
-      };
-
-      const tipoBg = {
-        asignacion_auto:    'var(--blue-bg)',
-        reasignacion:       'var(--blue-bg)',
-        alerta_sin_asignar: 'var(--amber-bg)'
-      };
-
+      const tipoBg = { asignacion_auto: 'var(--blue-bg)', reasignacion: 'var(--blue-bg)', alerta_sin_asignar: 'var(--amber-bg)' };
+      const tipoCls = { asignacion_auto: 'hev-assign', reasignacion: 'hev-assign', alerta_sin_asignar: 'hev-alert' };
       list.innerHTML = Object.entries(porDia).map(([fecha, evs]) => `
         <div class="history-day-header">${fecha}</div>
         ${evs.map(ev => {
           const hora = new Date(ev.created_at).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' });
-          const bg   = tipoBg[ev.tipo] || 'var(--bg-hover)';
-          const cls  = tipoClass[ev.tipo] || 'hev-assign';
-          return `<div class="history-item ${cls}">
-            <div class="history-item-icon" style="background:${bg};">${ev.emoji || '📋'}</div>
+          return `<div class="history-item ${tipoCls[ev.tipo] || 'hev-assign'}">
+            <div class="history-item-icon" style="background:${tipoBg[ev.tipo] || 'var(--bg-hover)'};">${ev.emoji || '📋'}</div>
             <div class="history-item-body">
               <div class="history-item-title">${ev.titulo}</div>
               <div class="history-item-sub">${ev.detalle || ''}</div>
             </div>
             <div class="history-item-time">${hora}</div>
           </div>`;
-        }).join('')}
-      `).join('');
-
+        }).join('')}`).join('');
     } catch(e) {
       list.innerHTML = `<div class="history-empty" style="color:var(--red-text);">Error: ${e.message}</div>`;
     }
+  }
+
+  function formatMsAge(ms) {
+    const mins  = Math.floor(ms / 60000);
+    const hours = Math.floor(mins / 60);
+    const days  = Math.floor(hours / 24);
+    if (days  > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${mins % 60}m`;
+    return `${mins}m`;
   }
 
 </script>
