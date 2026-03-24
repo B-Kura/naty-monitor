@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monitoreo Agentes — Naty Multicable</title>
+<title>Monitoreo NOC — Naty Multicable</title>
 
 <style>
   /* ── Variables de Tema (Dark - Azul Corporativo) ────────*/
@@ -14,7 +14,7 @@
     --border-main: rgba(28, 54, 84, 0.6);
     --border-light: rgba(28, 54, 84, 0.3);
     --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
-    
+
     --text-main: #dbe4f0;
     --text-title: #ffffff;
     --text-muted: #849cbd;
@@ -138,13 +138,13 @@
     box-shadow: var(--shadow-card);
   }
 
-  /* ── Header ───────────────────────────────────────────────*/
+  /* ── Header y Pestañas (Tabs) ─────────────────────────────*/
   header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 16px;
     margin-bottom: 20px;
     padding-bottom: 16px;
     border-bottom: 1px solid var(--border-light);
@@ -165,10 +165,46 @@
     50%       { box-shadow: 0 0 16px rgba(74, 222, 128, 0.9); }
   }
 
-  header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.2px; color: var(--text-title); }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.2px; color: var(--text-title); margin: 0; }
 
   @media (min-width: 769px) {
-    header h1 { font-size: 24px; }
+    header h1 { font-size: 20px; }
+  }
+
+  /* Contenedor de Tabs */
+  .tabs-container {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--border-main);
+    margin: 0 auto;
+  }
+
+  html[data-theme="light"] .tabs-container {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .tab-btn:hover {
+    color: var(--text-main);
+  }
+
+  .tab-btn.active {
+    background: var(--blue-bg);
+    color: var(--blue-text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   }
 
   .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -194,10 +230,19 @@
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   }
-  .theme-switch:hover, .control-btn:hover { 
-    background: var(--bg-hover); 
+  .theme-switch:hover, .control-btn:hover {
+    background: var(--bg-hover);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+  }
+
+  /* Utilidad para alternar pestañas */
+  .tab-content {
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+  .tab-content.active {
+    display: block;
   }
 
   /* ── Sección de contadores de chats ───────────────────────*/
@@ -210,6 +255,7 @@
 
   @media (min-width: 769px) {
     .chat-counters { grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .chat-counters.ops-4col { grid-template-columns: repeat(4, 1fr); }
   }
 
   .chat-card {
@@ -238,6 +284,9 @@
   .chat-card-icon.purple { background: var(--purple-bg); }
   .chat-card-icon.teal   { background: var(--teal-bg); }
   .chat-card-icon.amber  { background: var(--amber-bg); }
+  .chat-card-icon.red    { background: var(--red-bg); }
+  .chat-card-icon.blue   { background: var(--blue-bg); }
+  .chat-card-icon.green  { background: var(--green-bg); }
 
   .chat-card-info { flex: 1; min-width: 0; }
 
@@ -254,6 +303,9 @@
   .chat-card-value.purple { color: var(--purple-text); }
   .chat-card-value.teal   { color: var(--teal-text); }
   .chat-card-value.amber  { color: var(--amber-text); }
+  .chat-card-value.red    { color: var(--red-text); }
+  .chat-card-value.blue   { color: var(--blue-text); }
+  .chat-card-value.green  { color: var(--green-text); }
 
   /* ── Contadores de agentes ────────────────────────────────*/
   .counters {
@@ -738,7 +790,9 @@
     color: var(--blue-text); flex-shrink: 0;
     background: var(--blue-bg); padding: 2px 8px;
     border-radius: 6px; border: 1px solid var(--blue-border);
+    cursor: pointer; transition: all 0.2s;
   }
+  .conv-id:hover { background: var(--blue-text); color: #fff; }
 
   .conv-contact {
     font-size: 14px; font-weight: 600; color: var(--text-main);
@@ -942,7 +996,7 @@
   body.tv-mode {
     padding: 10px;
   }
-  body.tv-mode header,
+  body.tv-mode header .tabs-container,
   body.tv-mode #last-change-wrap,
   body.tv-mode #bottom-sections,
   body.tv-mode .filter-bar,
@@ -979,7 +1033,7 @@
   body.tv-mode .chat-card-value {
     font-size: 38px;
   }
-  
+
   /* Escalar el botón de asignar en Modo TV */
   body.tv-mode .btn-assign {
     font-size: 18px;
@@ -990,7 +1044,7 @@
     font-size: 16px;
     padding: 10px 18px;
   }
-  
+
   /* Escalar el temporizador en Modo TV */
   body.tv-mode .refresh-indicator span {
     font-size: 18px;
@@ -1029,6 +1083,217 @@
     border-color: var(--red-border);
     transform: translateX(-50%) translateY(-2px);
   }
+
+  /* ── Estilos Pestaña OPS (Mejorado Kanban Style) ──────────*/
+  .ops-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  @media (min-width: 769px) {
+    .ops-grid {
+      grid-template-columns: repeat(4, 1fr);
+      padding: 20px 28px;
+      gap: 20px;
+    }
+  }
+
+  .ops-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border-light);
+    min-height: 300px;
+  }
+
+  html[data-theme="light"] .ops-col {
+    background: rgba(0, 0, 0, 0.03);
+  }
+
+  .ops-col-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
+    margin-bottom: 4px;
+  }
+
+  .ops-ticket {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-left: 4px solid;
+    border-radius: 10px;
+    padding: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-decoration: none; /* Para que al ser link no tenga subrayado */
+  }
+
+  .ops-ticket:hover {
+    background: var(--bg-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    border-color: var(--border-main);
+  }
+
+  .ops-ticket-id {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: var(--blue-text);
+    background: rgba(0,0,0,0.2);
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    transition: color 0.2s, background 0.2s;
+  }
+
+  .ops-ticket-id:hover {
+    color: var(--text-title);
+    background: var(--blue-bg);
+  }
+
+  .ops-ticket-action {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.2s;
+    background: var(--bg-hover);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .ops-ticket:hover .ops-ticket-action {
+    opacity: 1;
+  }
+
+  .ops-ticket-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-title);
+    line-height: 1.4;
+  }
+
+  .ops-ticket-time {
+    font-size: 11px;
+    color: var(--text-dark);
+    font-weight: 500;
+  }
+
+  /* ── Toasts Notifications (Mejoras QoL) ────────────────────*/
+  #toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .toast {
+    background: var(--bg-card);
+    color: var(--text-title);
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-main);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-size: 13px;
+    font-weight: 600;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+    backdrop-filter: blur(8px);
+  }
+
+  @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+
+  /* ── Dashboard Central Grid ────────────────────────────────*/
+  .central-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  @media (min-width: 769px) {
+    .central-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+    }
+  }
+  .central-card {
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-radius: 16px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  @media (min-width: 769px) {
+    .central-card {
+      padding: 28px 24px;
+      gap: 20px;
+    }
+  }
+  .central-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card), 0 12px 40px rgba(0,0,0,0.2);
+  }
+  .central-icon {
+    width: 60px; height: 60px;
+    border-radius: 14px;
+    font-size: 26px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  @media (min-width: 769px) {
+    .central-icon {
+      width: 72px; height: 72px;
+      font-size: 32px;
+    }
+  }
+  .central-info {
+    flex: 1;
+  }
+  .central-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+  }
+  @media (min-width: 769px) {
+    .central-label {
+      font-size: 12px;
+      letter-spacing: 1.5px;
+    }
+  }
+  .central-value {
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  @media (min-width: 769px) {
+    .central-value {
+      font-size: 52px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1036,8 +1301,16 @@
 <header>
   <div class="header-left">
     <div class="logo-dot"></div>
-    <h1>Monitoreo de agentes — Naty</h1>
+    <h1>Monitoreo NOC — Naty</h1>
   </div>
+
+  <!-- Sistema de Pestañas -->
+  <div class="tabs-container">
+    <button class="tab-btn active" data-tab="central" onclick="switchTab('central')">🏠 Dashboard Central</button>
+    <button class="tab-btn" data-tab="agentes" onclick="switchTab('agentes')">👥 Agentes (Chatwoot)</button>
+    <button class="tab-btn" data-tab="ops" onclick="switchTab('ops')">🎫 Casos (OPS)</button>
+  </div>
+
   <div class="header-right">
     <button class="control-btn" id="sound-btn" onclick="toggleSound()">🔇 Sonido Off</button>
     <button class="control-btn" id="tv-btn" onclick="toggleTvMode()">📺 Modo TV</button>
@@ -1048,204 +1321,382 @@
   </div>
 </header>
 
-<div class="chat-counters">
-  <div class="chat-card glass-panel">
-    <div class="chat-card-icon purple">💬</div>
-    <div class="chat-card-info">
-      <div class="chat-card-label">Total chats</div>
-      <div class="chat-card-value purple" id="chat-total">—</div>
+<!-- ==========================================
+     PESTAÑA 0: DASHBOARD CENTRAL
+=========================================== -->
+<div id="tab-central" class="tab-content active">
+  <div class="glass-panel" style="padding: 24px 32px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <h2 style="font-size: 24px; color: var(--text-title); margin-bottom: 8px;">Centro de Monitoreo</h2>
+      <p style="color: var(--text-muted); font-size: 14px; max-width: 600px;">
+        Vista consolidada de la operación en tiempo real. Usa las pestañas superiores para profundizar en los detalles de los Agentes o los Tickets de OPS.
+      </p>
     </div>
-  </div>
-  <div class="chat-card glass-panel">
-    <div class="chat-card-icon teal">✅</div>
-    <div class="chat-card-info">
-      <div class="chat-card-label">Asignados</div>
-      <div class="chat-card-value teal" id="chat-assigned">—</div>
-    </div>
-  </div>
-  <div class="chat-card glass-panel assign-card" style="grid-column: 1 / -1;">
-    <div class="chat-card-icon amber">⏳</div>
-    <div class="chat-card-info">
-      <div class="chat-card-label">Sin asignar</div>
-      <div class="chat-card-value amber" id="chat-unassigned">—</div>
-    </div>
-    <div class="assign-area">
-      <button class="btn-assign" id="btn-assign" onclick="assignAll()">⚡ Asignar conversaciones</button>
-      <div class="assign-status" id="assign-status" style="display:none;"></div>
-    </div>
-  </div>
-</div>
 
-<div class="counters">
-  <div class="counter-card online">
-    <div class="counter-icon green">🟢</div>
-    <div class="counter-info">
-      <div class="counter-label">Agentes online</div>
-      <div class="counter-value green" id="count-online">—</div>
-      <div class="counter-sub">Activos ahora</div>
-    </div>
-  </div>
-  <div class="counter-card offline">
-    <div class="counter-icon red">🔴</div>
-    <div class="counter-info">
-      <div class="counter-label">Agentes offline</div>
-      <div class="counter-value red" id="count-offline">—</div>
-      <div class="counter-sub">Fuera de línea</div>
-    </div>
-  </div>
-  <div class="counter-card top">
-    <div class="counter-icon blue">⏱</div>
-    <div class="counter-info">
-      <div class="counter-label">Mayor tiempo offline</div>
-      <div class="counter-value blue" id="top-offline">—</div>
-      <div class="counter-sub" id="top-offline-mins"></div>
-    </div>
-  </div>
-</div>
-
-<div class="last-change-wrap glass-panel" id="last-change-wrap">
-  <div class="last-change-accent" id="last-change-accent" style="background: var(--border-main);"></div>
-  <div class="last-change-icon" id="last-change-icon" style="background: var(--border-light);">
-    <span id="last-change-emoji">⏳</span>
-  </div>
-  <div class="last-change-info">
-    <div class="last-change-label">Último evento</div>
-    <div class="last-change-name" id="last-change-name">Esperando primer evento...</div>
-    <div class="last-change-detail" id="last-change-detail">El panel se actualizará al detectar cambios</div>
-  </div>
-  <div class="last-change-time">
-    <div class="time-label">Hora</div>
-    <div class="time-value" id="last-change-time">—</div>
-  </div>
-
-  <!-- Botón historial -->
-  <div class="history-toggle-wrap">
-    <button class="history-toggle-btn" id="history-toggle-btn" onclick="toggleHistory()">
-      📋 Historial <span id="history-count" class="history-count-badge">0</span>
-    </button>
-  </div>
-</div>
-
-<!-- Lista desplegable de últimos 20 eventos -->
-<div class="history-panel glass-panel" id="history-panel" style="display:none;">
-  <div class="history-header">
-    <span class="history-title">📋 Historial de eventos</span>
-    <button class="history-clear-btn" onclick="clearHistory()">Limpiar</button>
-  </div>
-  <div class="history-list" id="history-list">
-    <div class="history-empty">Sin eventos registrados aún</div>
-  </div>
-</div>
-
-<div class="table-wrap glass-panel">
-  <div class="table-header">
-    <div class="table-header-left">
-      <span class="table-title">Estado de agentes</span>
-      <span class="badge" id="total-badge">— agentes</span>
-    </div>
-    
-    <!-- Nuevo Temporizador Visual -->
-    <div class="refresh-indicator">
-      <span>Próxima act.</span>
-      <div class="circular-timer">
-        <svg viewBox="0 0 36 36">
-          <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-          <path class="progress" id="refresh-circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-        </svg>
-        <div class="time" id="refresh-time">10</div>
+    <div style="display: flex; align-items: center; gap: 32px; flex-wrap: wrap;">
+      <!-- Reloj Digital Grande -->
+      <div style="text-align: right;">
+        <div id="central-clock" style="font-size: 36px; font-weight: 800; color: var(--blue-text); font-variant-numeric: tabular-nums; letter-spacing: 1px; line-height: 1.1;">--:--:--</div>
+        <div id="central-date" style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;">Cargando...</div>
       </div>
-    </div>
-  </div>
-  
-  <div class="filter-bar">
-    <div class="filter-group">
-      <button class="filter-chip active" data-filter="all"     onclick="setFilter('all')">Todos</button>
-      <button class="filter-chip"        data-filter="online"  onclick="setFilter('online')">🟢 Online</button>
-      <button class="filter-chip"        data-filter="offline" onclick="setFilter('offline')">🔴 Offline</button>
-    </div>
-    <div class="filter-divider"></div>
-    <div class="filter-group">
-      <button class="filter-chip sort-chip active" data-sort="estado"  onclick="setSort('estado')">Estado</button>
-      <button class="filter-chip sort-chip"        data-sort="nombre"  onclick="setSort('nombre')">A–Z</button>
-      <button class="filter-chip sort-chip"        data-sort="chats"   onclick="setSort('chats')">Chats</button>
-      <button class="filter-chip sort-chip"        data-sort="offline" onclick="setSort('offline')">T. Offline</button>
-    </div>
-  </div>
-  <div id="table-container">
-    <div class="loading">
-      <div class="spinner"></div>
-      Cargando datos...
-    </div>
-  </div>
-</div>
 
-<!-- Envolvemos las secciones secundarias para ocultarlas fácil en modo TV -->
-<div id="bottom-sections" style="margin-top:16px; padding-bottom:40px;">
-
-  <!-- ── Agentes en llamadas ───────────────────────────────-->
-  <div class="raw-header" style="margin-bottom:12px;">
-    <div class="raw-title-row">
-      <span style="font-size:15px; font-weight:600; color:var(--text-title);">📞 Agentes en llamadas</span>
-      <span class="badge" id="llamadas-count-badge">0 marcados</span>
-    </div>
-    <button class="raw-toggle-btn" onclick="toggleLlamadas()" id="llamadas-toggle">Mostrar</button>
-  </div>
-  <div id="llamadas-section" style="display:none; margin-bottom:20px;">
-    <div class="glass-panel" style="border-radius:12px; overflow:hidden;">
-      <div style="padding:12px 20px; border-bottom:1px solid var(--border-light); background:rgba(0,0,0,0.02); font-size:12px; color:var(--text-muted);">
-        Los agentes marcados reciben máximo <strong style="color:var(--amber-text);">5 chats</strong> en la asignación automática. Los no marcados tienen prioridad (máximo 10). El marcado persiste hasta que lo quites manualmente.
-      </div>
-      <div id="llamadas-list" style="padding:12px 20px; display:flex; flex-wrap:wrap; gap:10px;">
-        <div style="color:var(--text-dark); font-size:13px; padding:8px 0;">Cargando agentes...</div>
+      <!-- Temporizador -->
+      <div class="refresh-indicator" style="background: rgba(0,0,0,0.2); padding: 12px 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+        <span style="font-size: 14px;">Próxima actualización en</span>
+        <div class="circular-timer" style="width: 36px; height: 36px;">
+          <svg viewBox="0 0 36 36">
+            <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path class="progress" id="central-refresh-circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <div class="time" id="central-refresh-time" style="font-size: 13px;">10</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="raw-header" style="margin-bottom:12px; margin-top:20px;">
-    <div class="raw-title-row">
-      <span style="font-size:15px; font-weight:600; color:var(--text-title);">📅 Historial persistente</span>
-      <span class="badge">últimos 7 días</span>
-    </div>
-    <button class="raw-toggle-btn" onclick="togglePersistentHistory()" id="persistent-history-toggle">Mostrar</button>
-  </div>
-  <div id="persistent-history-section" style="display:none; margin-bottom:20px;">
-    <div class="history-panel glass-panel" style="display:block; margin-bottom:0;">
-      <div class="history-header">
-        <span class="history-title">Eventos guardados en Supabase</span>
-        <span class="badge" id="persistent-history-count">—</span>
+  <h3 style="margin-top: 32px; margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 1.5px;">Métricas de Chatwoot</h3>
+  <div class="central-grid">
+    <!-- Card: Agentes Online -->
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--green-text);">
+      <div class="central-icon green">🟢</div>
+      <div class="central-info">
+        <div class="central-label">Agentes en línea</div>
+        <div class="central-value green" id="central-count-online">—</div>
       </div>
-      <div class="history-list" id="persistent-history-list">
-        <div class="history-empty">Cargando...</div>
+    </div>
+
+    <!-- Card: Total Chats -->
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--purple-text);">
+      <div class="central-icon purple">💬</div>
+      <div class="central-info">
+        <div class="central-label">Total de Chats</div>
+        <div class="central-value purple" id="central-chat-total">—</div>
+      </div>
+    </div>
+
+    <!-- Card: Chats Asignados -->
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--teal-text);">
+      <div class="central-icon teal">✅</div>
+      <div class="central-info">
+        <div class="central-label">Chats Asignados</div>
+        <div class="central-value teal" id="central-chat-assigned">—</div>
+      </div>
+    </div>
+
+    <!-- Card: Chats Sin Asignar -->
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--amber-text);">
+      <div class="central-icon amber">⏳</div>
+      <div class="central-info">
+        <div class="central-label">Chats sin Asignar</div>
+        <div class="central-value amber" id="central-chat-unassigned">—</div>
       </div>
     </div>
   </div>
 
-  <div class="raw-header">
-    <div class="raw-title-row">
-      <span style="font-size:15px; font-weight:600; color:var(--text-title);">Base de datos cruda</span>
-      <span class="badge">naty_logs</span>
+  <h3 style="margin-top: 36px; margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 1.5px;">Casos Corporativos (OPS)</h3>
+  <div class="central-grid">
+    <!-- Card: OPS Abiertos -->
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--green-text);">
+      <div class="central-icon green" style="background: var(--green-card);">🟢</div>
+      <div class="central-info">
+        <div class="central-label">Abiertos</div>
+        <div class="central-value green" id="central-ops-count-0">—</div>
+      </div>
     </div>
-    <button class="raw-toggle-btn" onclick="toggleRaw()" id="raw-toggle">Mostrar</button>
-  </div>
-  <div id="raw-section" class="raw-section glass-panel" style="display:none;">
-    <div class="raw-scroll">
-      <table class="raw-table">
-        <thead>
-          <tr style="background:rgba(0,0,0,0.03);">
-            <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">id_agente</th>
-            <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">nombre</th>
-            <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">estado</th>
-            <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">ultima_conexion</th>
-            <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">tiempo_desc_min</th>
-            <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">chats_asignados</th>
-            <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">ultimo_chequeo</th>
-          </tr>
-        </thead>
-        <tbody id="raw-tbody"></tbody>
-      </table>
+
+    <!-- Card: OPS En Proceso -->
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--blue-text);">
+      <div class="central-icon blue" style="background: var(--blue-card);">🔵</div>
+      <div class="central-info">
+        <div class="central-label">En Proceso</div>
+        <div class="central-value blue" id="central-ops-count-1">—</div>
+      </div>
+    </div>
+
+    <!-- Card: OPS Pendientes -->
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--amber-text);">
+      <div class="central-icon amber" style="background: var(--amber-bg);">🟠</div>
+      <div class="central-info">
+        <div class="central-label">Pendientes</div>
+        <div class="central-value amber" id="central-ops-count-2">—</div>
+      </div>
+    </div>
+
+    <!-- Card: OPS Demanda -->
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--red-text);">
+      <div class="central-icon red" style="background: var(--red-card);">🔴</div>
+      <div class="central-info">
+        <div class="central-label">Demanda</div>
+        <div class="central-value red" id="central-ops-count-3">—</div>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- ==========================================
+     PESTAÑA 1: AGENTES (CHATWOOT)
+=========================================== -->
+<div id="tab-agentes" class="tab-content">
+  <div class="chat-counters">
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon purple">💬</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">Total chats</div>
+        <div class="chat-card-value purple" id="chat-total">—</div>
+      </div>
+    </div>
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon teal">✅</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">Asignados</div>
+        <div class="chat-card-value teal" id="chat-assigned">—</div>
+      </div>
+    </div>
+    <div class="chat-card glass-panel assign-card" style="grid-column: 1 / -1;">
+      <div class="chat-card-icon amber">⏳</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">Sin asignar</div>
+        <div class="chat-card-value amber" id="chat-unassigned">—</div>
+      </div>
+      <div class="assign-area">
+        <button class="btn-assign" id="btn-assign" onclick="assignAll()">⚡ Asignar conversaciones</button>
+        <div class="assign-status" id="assign-status" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="counters">
+    <div class="counter-card online">
+      <div class="counter-icon green">🟢</div>
+      <div class="counter-info">
+        <div class="counter-label">Agentes online</div>
+        <div class="counter-value green" id="count-online">—</div>
+        <div class="counter-sub">Activos ahora</div>
+      </div>
+    </div>
+    <div class="counter-card offline">
+      <div class="counter-icon red">🔴</div>
+      <div class="counter-info">
+        <div class="counter-label">Agentes offline</div>
+        <div class="counter-value red" id="count-offline">—</div>
+        <div class="counter-sub">Fuera de línea</div>
+      </div>
+    </div>
+    <div class="counter-card top">
+      <div class="counter-icon blue">⏱</div>
+      <div class="counter-info">
+        <div class="counter-label">Mayor tiempo offline</div>
+        <div class="counter-value blue" id="top-offline">—</div>
+        <div class="counter-sub" id="top-offline-mins"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="last-change-wrap glass-panel" id="last-change-wrap">
+    <div class="last-change-accent" id="last-change-accent" style="background: var(--border-main);"></div>
+    <div class="last-change-icon" id="last-change-icon" style="background: var(--border-light);">
+      <span id="last-change-emoji">⏳</span>
+    </div>
+    <div class="last-change-info">
+      <div class="last-change-label">Último evento</div>
+      <div class="last-change-name" id="last-change-name">Esperando primer evento...</div>
+      <div class="last-change-detail" id="last-change-detail">El panel se actualizará al detectar cambios</div>
+    </div>
+    <div class="last-change-time">
+      <div class="time-label">Hora</div>
+      <div class="time-value" id="last-change-time">—</div>
+    </div>
+
+    <!-- Botón historial -->
+    <div class="history-toggle-wrap">
+      <button class="history-toggle-btn" id="history-toggle-btn" onclick="toggleHistory()">
+        📋 Historial <span id="history-count" class="history-count-badge">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Lista desplegable de últimos 20 eventos -->
+  <div class="history-panel glass-panel" id="history-panel" style="display:none;">
+    <div class="history-header">
+      <span class="history-title">📋 Historial de eventos</span>
+      <button class="history-clear-btn" onclick="clearHistory()">Limpiar</button>
+    </div>
+    <div class="history-list" id="history-list">
+      <div class="history-empty">Sin eventos registrados aún</div>
+    </div>
+  </div>
+
+  <div class="table-wrap glass-panel">
+    <div class="table-header">
+      <div class="table-header-left">
+        <span class="table-title">Estado de agentes</span>
+        <span class="badge" id="total-badge">— agentes</span>
+      </div>
+
+      <!-- Temporizador Visual -->
+      <div class="refresh-indicator">
+        <span>Próxima act.</span>
+        <div class="circular-timer">
+          <svg viewBox="0 0 36 36">
+            <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path class="progress" id="refresh-circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <div class="time" id="refresh-time">10</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-group">
+        <button class="filter-chip active" data-filter="all"     onclick="setFilter('all')">Todos</button>
+        <button class="filter-chip"        data-filter="online"  onclick="setFilter('online')">🟢 Online</button>
+        <button class="filter-chip"        data-filter="offline" onclick="setFilter('offline')">🔴 Offline</button>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <button class="filter-chip sort-chip active" data-sort="estado"  onclick="setSort('estado')">Estado</button>
+        <button class="filter-chip sort-chip"        data-sort="nombre"  onclick="setSort('nombre')">A–Z</button>
+        <button class="filter-chip sort-chip"        data-sort="chats"   onclick="setSort('chats')">Chats</button>
+        <button class="filter-chip sort-chip"        data-sort="offline" onclick="setSort('offline')">T. Offline</button>
+      </div>
+    </div>
+    <div id="table-container">
+      <div class="loading">
+        <div class="spinner"></div>
+        Cargando datos...
+      </div>
+    </div>
+  </div>
+
+  <!-- Envolvemos las secciones secundarias para ocultarlas fácil en modo TV -->
+  <div id="bottom-sections" style="margin-top:16px; padding-bottom:40px;">
+    <!-- Agentes en llamadas -->
+    <div class="raw-header" style="margin-bottom:12px;">
+      <div class="raw-title-row">
+        <span style="font-size:15px; font-weight:600; color:var(--text-title);">📞 Agentes en llamadas</span>
+        <span class="badge" id="llamadas-count-badge">0 marcados</span>
+      </div>
+      <button class="raw-toggle-btn" onclick="toggleLlamadas()" id="llamadas-toggle">Mostrar</button>
+    </div>
+    <div id="llamadas-section" style="display:none; margin-bottom:20px;">
+      <div class="glass-panel" style="border-radius:12px; overflow:hidden;">
+        <div style="padding:12px 20px; border-bottom:1px solid var(--border-light); background:rgba(0,0,0,0.02); font-size:12px; color:var(--text-muted);">
+          Los agentes marcados reciben máximo <strong style="color:var(--amber-text);">5 chats</strong> en la asignación automática. Los no marcados tienen prioridad (máximo 10). El marcado persiste hasta que lo quites manualmente.
+        </div>
+        <div id="llamadas-list" style="padding:12px 20px; display:flex; flex-wrap:wrap; gap:10px;">
+          <div style="color:var(--text-dark); font-size:13px; padding:8px 0;">Cargando agentes...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="raw-header" style="margin-bottom:12px; margin-top:20px;">
+      <div class="raw-title-row">
+        <span style="font-size:15px; font-weight:600; color:var(--text-title);">📅 Historial persistente</span>
+        <span class="badge">últimos 7 días</span>
+      </div>
+      <button class="raw-toggle-btn" onclick="togglePersistentHistory()" id="persistent-history-toggle">Mostrar</button>
+    </div>
+    <div id="persistent-history-section" style="display:none; margin-bottom:20px;">
+      <div class="history-panel glass-panel" style="display:block; margin-bottom:0;">
+        <div class="history-header">
+          <span class="history-title">Eventos guardados en Supabase</span>
+          <span class="badge" id="persistent-history-count">—</span>
+        </div>
+        <div class="history-list" id="persistent-history-list">
+          <div class="history-empty">Cargando...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="raw-header">
+      <div class="raw-title-row">
+        <span style="font-size:15px; font-weight:600; color:var(--text-title);">Base de datos cruda</span>
+        <span class="badge">naty_logs</span>
+      </div>
+      <button class="raw-toggle-btn" onclick="toggleRaw()" id="raw-toggle">Mostrar</button>
+    </div>
+    <div id="raw-section" class="raw-section glass-panel" style="display:none;">
+      <div class="raw-scroll">
+        <table class="raw-table">
+          <thead>
+            <tr style="background:rgba(0,0,0,0.03);">
+              <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">id_agente</th>
+              <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">nombre</th>
+              <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">estado</th>
+              <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">ultima_conexion</th>
+              <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">tiempo_desc_min</th>
+              <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">chats_asignados</th>
+              <th style="padding:12px 16px; text-align:left; color:var(--text-dark); font-size:11px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid var(--border-light); white-space:nowrap;">ultimo_chequeo</th>
+            </tr>
+          </thead>
+          <tbody id="raw-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     PESTAÑA 2: CASOS CORPORATIVOS (OPS)
+=========================================== -->
+<div id="tab-ops" class="tab-content">
+  <div class="chat-counters ops-4col">
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon green">🟢</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">Abiertos</div>
+        <div class="chat-card-value green" id="ops-count-0">—</div>
+      </div>
+    </div>
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon blue">🔵</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">En Proceso</div>
+        <div class="chat-card-value blue" id="ops-count-1">—</div>
+      </div>
+    </div>
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon amber">🟠</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">Pendientes</div>
+        <div class="chat-card-value amber" id="ops-count-2">—</div>
+      </div>
+    </div>
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon red">🔴</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">Demanda</div>
+        <div class="chat-card-value red" id="ops-count-3">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap glass-panel" style="background: transparent; border: none; box-shadow: none;">
+    <div class="table-header" style="justify-content: flex-end; background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 12px; margin-bottom: 16px;">
+      <!-- Temporizador Visual Clonado para OPS -->
+      <div class="refresh-indicator">
+        <span>Próxima act.</span>
+        <div class="circular-timer">
+          <svg viewBox="0 0 36 36">
+            <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path class="progress" id="ops-refresh-circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <div class="time" id="ops-refresh-time">10</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ops-content">
+      <div class="loading glass-panel" style="border-radius: 12px;">
+        <div class="spinner"></div>
+        Consultando API de OPS...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Contenedor para Notificaciones Flotantes (Toasts) -->
+<div id="toast-container"></div>
 
 <!-- Botón flotante para salir de Modo TV -->
 <button id="exit-tv-btn" onclick="toggleTvMode()">
@@ -1253,6 +1704,58 @@
 </button>
 
 <script>
+  /* ── Notificaciones Toast (QoL) ───────────────────────────*/
+  function showToast(message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `✅ ${message}`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function copyTicket(event, text) {
+    if (event) {
+      event.preventDefault(); // Evitar que el <a> abra la pestaña si se hizo clic en el número
+      event.stopPropagation();
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => showToast(`Copiado: #${text}`));
+    } else {
+      // Fallback para HTTP locales
+      let textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast(`Copiado: #${text}`);
+      } catch (err) {
+        console.error('Error copiando', err);
+      }
+      textArea.remove();
+    }
+  }
+
+  /* ── Lógica de Pestañas (Tabs) ────────────────────────────*/
+  let currentTab = 'central'; // Pestaña inicial por defecto
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-central').classList.toggle('active', tab === 'central');
+    document.getElementById('tab-agentes').classList.toggle('active', tab === 'agentes');
+    document.getElementById('tab-ops').classList.toggle('active', tab === 'ops');
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+
+    if (tab === 'ops') fetchOpsData(); // Cargar datos inmediatamente al abrir la pestaña
+    if (tab === 'central') fetchAll(); // Refrescar los datos principales si el usuario vuelve a inicio
+  }
+
   /* ── Lógica del Tema Claro/Oscuro ─────────────────────────*/
   function initTheme() {
     const savedTheme = localStorage.getItem('naty-theme') || 'dark';
@@ -1261,15 +1764,13 @@
   }
 
   function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    const theme = document.documentElement.getAttribute('data-theme');
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem('naty-theme', newTheme);
     updateThemeButton(newTheme);
-    
-    if (document.getElementById('raw-section').style.display !== 'none') {
-      fetchRaw();
-    }
+
+    if (document.getElementById('raw-section').style.display !== 'none') fetchRaw();
   }
 
   function updateThemeButton(theme) {
@@ -1287,8 +1788,7 @@
   function toggleTvMode() {
     const isTv = document.body.classList.toggle('tv-mode');
     document.getElementById('exit-tv-btn').style.display = isTv ? 'block' : 'none';
-    
-    // Activar o desactivar Fullscreen nativo del navegador
+
     if (isTv) {
       if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(err => console.log(err));
@@ -1300,7 +1800,6 @@
     }
   }
 
-  // Sincronizar el modo TV si el usuario presiona la tecla ESC para salir
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
       document.body.classList.remove('tv-mode');
@@ -1311,7 +1810,7 @@
   /* ── Sonido de Alerta (Web Audio API) ─────────────────────*/
   let soundEnabled = false;
   let audioCtx = null;
-  let lastHighLoadBeep = 0; // Para no sonar cada 15s indefinidamente
+  let lastHighLoadBeep = 0;
 
   function toggleSound() {
     soundEnabled = !soundEnabled;
@@ -1319,15 +1818,11 @@
     btn.innerHTML = soundEnabled ? '🔊 Sonido On' : '🔇 Sonido Off';
     btn.style.color = soundEnabled ? 'var(--green-text)' : 'var(--blue-text)';
     btn.style.borderColor = soundEnabled ? 'var(--green-border)' : '';
-    
+
     if (soundEnabled) {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-      playBeep(true); // Reproducir muy bajito para inicializar contexto en click
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      playBeep(true);
     }
   }
 
@@ -1336,22 +1831,19 @@
     try {
       if (!audioCtx) return;
       if (audioCtx.state === 'suspended') audioCtx.resume();
-      
+
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-      
-      // Doble beep de alerta
+
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // Pitch alto (A5)
-      
-      const vol = isTest ? 0.001 : 0.15; // Volumen suave, apenas perceptible si es test
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+
+      const vol = isTest ? 0.001 : 0.15;
       gain.gain.setValueAtTime(0, audioCtx.currentTime);
-      // Primer beep
       gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.05);
       gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
-      // Segundo beep
       gain.gain.setValueAtTime(0, audioCtx.currentTime + 0.2);
       gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.25);
       gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.35);
@@ -1367,7 +1859,7 @@
   function initNotifButton() {
     const btn = document.getElementById('notif-btn');
     if (!('Notification' in window)) {
-      btn.style.display = 'none'; // navegador no soporta
+      btn.style.display = 'none';
       return;
     }
     if (Notification.permission === 'granted') {
@@ -1387,10 +1879,7 @@
     const result = await Notification.requestPermission();
     initNotifButton();
     if (result === 'granted') {
-      sendNotification(
-        '🔔 Notificaciones activas',
-        'Recibirás alertas cuando haya conversaciones sin asignar por más de 15 min.'
-      );
+      sendNotification('🔔 Notificaciones activas', 'Recibirás alertas.');
     }
   }
 
@@ -1400,29 +1889,22 @@
       new Notification(title, {
         body,
         icon: 'https://naty.watiteam.com/favicon.ico',
-        badge: 'https://naty.watiteam.com/favicon.ico',
-        tag:  'naty-monitor' // evita apilar múltiples notifs del mismo tipo
+        tag:  'naty-monitor'
       });
-    } catch(e) {
-      console.warn('Notificación fallida:', e.message);
-    }
+    } catch(e) {}
   }
 
   initNotifButton();
 
-  /* ── Credenciales Supabase ────────────────────────────────*/
+  /* ── Credenciales y Constantes ────────────────────────────*/
   const SUPABASE_URL = 'https://yzhlaypunmtfokbblpxt.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6aGxheXB1bm10Zm9rYmJscHh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNDkyMTYsImV4cCI6MjA4ODgyNTIxNn0.CSK39wZBY7hgLByD5RK92jFc6QzoBHSzLN3EpdPPo3o';
+  const HEADERS = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
 
-  const HEADERS = {
-    'apikey': SUPABASE_KEY,
-    'Authorization': `Bearer ${SUPABASE_KEY}`
-  };
-
-  /* ── Webhook n8n (evita CORS — n8n tiene el token internamente) ──*/
   const WEBHOOK_ASIGNAR   = 'https://hook.watiteam.com/webhook/naty-asignar';
   const WEBHOOK_CONVS     = 'https://hook.watiteam.com/webhook/naty-convs-agente';
   const WEBHOOK_REASIGNAR = 'https://hook.watiteam.com/webhook/naty-reasignar';
+  const WEBHOOK_OPS       = 'https://hook.watiteam.com/webhook/naty-ops';
   const WEBHOOK_SECRET    = 'naty-2026-secret';
   const CHATWOOT_BASE    = 'https://naty.watiteam.com';
   const CHATWOOT_TEAM    = 20;
@@ -1437,21 +1919,32 @@
   let activeSort      = 'estado';
   let sortDir         = {};
   let expandedAgents  = new Set();
-  // IDs de agentes marcados como "en llamadas" — persiste en localStorage
-  let agentesEnLlamadas = new Set(
-    JSON.parse(localStorage.getItem('naty-llamadas') || '[]')
-  );
-  let eventHistory    = [];          // hasta 20 eventos
-  let unassignedSince = null;        // timestamp cuando unassigned > 0 por primera vez
-  const UNASSIGNED_ALERT_MINS = 15;  // alerta si sin asignar > 15 min
+  let agentesEnLlamadas = new Set(JSON.parse(localStorage.getItem('naty-llamadas') || '[]'));
+  let eventHistory    = [];
+  let unassignedSince = null;
+  const UNASSIGNED_ALERT_MINS = 15;
 
   function clock() {
-    document.getElementById('clock').textContent =
-      new Date().toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    // Formato de fecha para el dashboard central (Ej: martes, 24 de marzo de 2026)
+    const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dateString = now.toLocaleDateString('es-HN', optionsDate);
+
+    // Actualizar reloj pequeño (Header)
+    const smallClock = document.getElementById('clock');
+    if (smallClock) smallClock.textContent = timeString;
+
+    // Actualizar reloj grande (Dashboard Central)
+    const centralClock = document.getElementById('central-clock');
+    if (centralClock) centralClock.textContent = timeString;
+
+    const centralDate = document.getElementById('central-date');
+    if (centralDate) centralDate.textContent = dateString;
+  }
   setInterval(clock, 1000);
-  clock();
+  clock(); // Ejecución inicial
 
   function animateValue(el, newVal) {
     if (el.textContent !== String(newVal)) {
@@ -1467,20 +1960,17 @@
     if (mins >= 100) return 'mid';
     return 'low';
   }
-
   function barColor(mins) {
     if (mins >= 800) return 'var(--red-text)';
     if (mins >= 100) return 'var(--amber-text)';
     return 'var(--text-dark)';
   }
-
   function chatBadgeClass(n) {
     if (n >= 8) return 'load-high';
     if (n >= 4) return 'load-mid';
     if (n >= 1) return 'load-low';
     return 'load-none';
   }
-
   function formatMins(mins) {
     if (!mins || mins === 0) return '—';
     if (mins >= 60) {
@@ -1491,11 +1981,9 @@
     return `${mins} min`;
   }
 
-  /* ── Registrar evento y actualizar tarjeta + historial ────*/
+  /* ── Eventos e Historial ──────────────────────────────────*/
   function pushEvent({ emoji, color, bgIcon, title, detail, type }) {
     const hora = new Date().toLocaleTimeString('es-HN');
-
-    // Actualizar tarjeta grande
     document.getElementById('last-change-accent').style.background = color;
     document.getElementById('last-change-icon').style.background   = bgIcon;
     document.getElementById('last-change-emoji').textContent       = emoji;
@@ -1510,10 +1998,8 @@
     void wrap.offsetWidth;
     wrap.classList.add('new-change');
 
-    // Agregar al historial (máx 20)
     eventHistory.unshift({ emoji, color, bgIcon, title, detail, type, hora });
     if (eventHistory.length > 20) eventHistory.pop();
-
     renderHistory();
   }
 
@@ -1529,11 +2015,8 @@
     });
   }
 
-  /* ── Renderizar lista de historial ────────────────────────*/
   function renderHistory() {
-    // Actualizar badge
     document.getElementById('history-count').textContent = eventHistory.length;
-
     const list = document.getElementById('history-list');
     if (!list) return;
 
@@ -1553,7 +2036,6 @@
       </div>`).join('');
   }
 
-  /* ── Toggle panel historial ───────────────────────────────*/
   function toggleHistory() {
     const panel = document.getElementById('history-panel');
     const btn   = document.getElementById('history-toggle-btn');
@@ -1562,12 +2044,12 @@
     btn.classList.toggle('open', open);
   }
 
-  /* ── Limpiar historial ────────────────────────────────────*/
   function clearHistory() {
     eventHistory = [];
     renderHistory();
   }
 
+  /* ── Chatwoot Logic ───────────────────────────────────────*/
   async function fetchConversations() {
     try {
       const res = await fetch(
@@ -1575,60 +2057,50 @@
         { headers: HEADERS }
       );
       const data = await res.json();
-
       convMap = {};
       let allCount = null, assignedCount = null, unassignedCount = null;
 
       for (const row of data) {
         if (row.id_agente === 0) {
-          allCount        = row.all_count;
-          assignedCount   = row.assigned_count;
-          unassignedCount = row.unassigned_count;
+          allCount = row.all_count; assignedCount = row.assigned_count; unassignedCount = row.unassigned_count;
         } else {
           convMap[row.id_agente] = row.total_conversaciones || 0;
         }
       }
 
+      // Actualizar Tab Agentes
       animateValue(document.getElementById('chat-total'),      allCount        ?? '—');
       animateValue(document.getElementById('chat-assigned'),   assignedCount   ?? '—');
       animateValue(document.getElementById('chat-unassigned'), unassignedCount ?? '—');
 
-      // ── Alerta si hay sin asignar por más de 15 min ────────
+      // Actualizar Dashboard Central
+      const centralTotal = document.getElementById('central-chat-total');
+      const centralAssigned = document.getElementById('central-chat-assigned');
+      const centralUnassigned = document.getElementById('central-chat-unassigned');
+      if (centralTotal) animateValue(centralTotal, allCount ?? '—');
+      if (centralAssigned) animateValue(centralAssigned, assignedCount ?? '—');
+      if (centralUnassigned) animateValue(centralUnassigned, unassignedCount ?? '—');
+
       const ahora = Date.now();
       if (unassignedCount > 0) {
         if (!unassignedSince) unassignedSince = ahora;
         const minsPendiente = Math.floor((ahora - unassignedSince) / 60000);
         if (minsPendiente >= UNASSIGNED_ALERT_MINS) {
-          
-          playBeep(); // Beep de alerta para chats sin asignar
-          
+          playBeep();
           pushEvent({
-            emoji:  '⏳',
-            color:  'var(--amber-text)',
-            bgIcon: 'var(--amber-bg)',
-            title:  `${unassignedCount} conversación${unassignedCount !== 1 ? 'es' : ''} sin asignar`,
-            detail: `Llevan más de ${minsPendiente} min esperando asignación`,
-            type:   'hev-alert'
+            emoji: '⏳', color: 'var(--amber-text)', bgIcon: 'var(--amber-bg)',
+            title: `${unassignedCount} conversación(es) sin asignar`,
+            detail: `Llevan más de ${minsPendiente} min esperando`,
+            type: 'hev-alert'
           });
-          sendNotification(
-            `⏳ ${unassignedCount} conversación${unassignedCount !== 1 ? 'es' : ''} sin asignar`,
-            `Llevan más de ${minsPendiente} minutos esperando asignación en el equipo Naty.`
-          );
-          logEventToSupabase(
-            'alerta_sin_asignar', '⏳',
-            `${unassignedCount} conversación${unassignedCount !== 1 ? 'es' : ''} sin asignar`,
-            `Llevan más de ${minsPendiente} min esperando asignación`,
-            { unassigned_count: unassignedCount, minutos: minsPendiente }
-          );
+          sendNotification(`⏳ ${unassignedCount} chats sin asignar`, `Más de ${minsPendiente} min esperando.`);
+          logEventToSupabase('alerta_sin_asignar', '⏳', `${unassignedCount} chats sin asignar`, `Esperando ${minsPendiente} min`, { minutos: minsPendiente });
           unassignedSince = ahora;
         }
       } else {
-        unassignedSince = null; // se asignaron todas, resetear
+        unassignedSince = null;
       }
-
-    } catch(e) {
-      console.warn('Error leyendo conversaciones:', e.message);
-    }
+    } catch(e) {}
   }
 
   async function fetchAgents() {
@@ -1637,9 +2109,6 @@
         `${SUPABASE_URL}/rest/v1/naty_logs?select=*&id_agente=neq.0&order=estado.desc,tiempo_desconectado_minutos.desc`,
         { headers: HEADERS }
       );
-
-      if (!res.ok) throw new Error('Error al conectar con Supabase');
-
       const data = await res.json();
 
       let changeDetected = false;
@@ -1651,33 +2120,30 @@
           changeDetected = true;
         }
       }
-
       for (const agent of data) {
         if (agent.id_agente !== 0) previousStates[agent.id_agente] = agent.estado;
       }
 
-      const agentes = data.filter(a => a.id_agente !== 0);
-      agentSnapshot = agentes;
-      
-      // Alerta Beep si hay algún agente sobrecargado (>= 8 chats)
-      const hasHighLoad = agentes.some(a => (a.total_conversaciones || 0) >= 8);
+      agentSnapshot = data.filter(a => a.id_agente !== 0);
+
+      const hasHighLoad = agentSnapshot.some(a => (a.total_conversaciones || 0) >= 8);
       if (hasHighLoad) {
-        // Sonar máximo una vez cada 60s para no saturar 
-        if (Date.now() - lastHighLoadBeep > 60000) {
-          playBeep();
-          lastHighLoadBeep = Date.now();
-        }
+        if (Date.now() - lastHighLoadBeep > 60000) { playBeep(); lastHighLoadBeep = Date.now(); }
       } else {
-        lastHighLoadBeep = 0; // Resetear si ya nadie tiene carga alta
+        lastHighLoadBeep = 0;
       }
 
-      // Threshold: offline < 5 min se cuenta como online
-      const onlineCount  = agentes.filter(a => a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD)).length;
-      const offlineCount = agentes.filter(a => a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) >= OFFLINE_THRESHOLD).length;
-      const topAgent     = agentes.find(a => a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) >= OFFLINE_THRESHOLD);
+      const onlineCount  = agentSnapshot.filter(a => a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD)).length;
+      const offlineCount = agentSnapshot.filter(a => a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) >= OFFLINE_THRESHOLD).length;
+      const topAgent     = agentSnapshot.find(a => a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) >= OFFLINE_THRESHOLD);
 
+      // Actualizar Tab Agentes
       animateValue(document.getElementById('count-online'),  onlineCount);
       animateValue(document.getElementById('count-offline'), offlineCount);
+
+      // Actualizar Dashboard Central
+      const centralOnline = document.getElementById('central-count-online');
+      if (centralOnline) animateValue(centralOnline, onlineCount);
 
       if (topAgent) {
         document.getElementById('top-offline').textContent      = topAgent.nombre;
@@ -1688,20 +2154,13 @@
       }
 
       document.getElementById('last-update').textContent = `Actualizado: ${new Date().toLocaleTimeString('es-HN')}`;
-      maxMins = Math.max(1, ...agentes.map(a => a.tiempo_desconectado_minutos || 0));
+      maxMins = Math.max(1, ...agentSnapshot.map(a => a.tiempo_desconectado_minutos || 0));
       renderTable();
-
-    } catch (err) {
-      document.getElementById('table-container').innerHTML =
-        `<div class="error">Error al cargar datos: ${err.message}</div>`;
-    }
+    } catch (err) {}
   }
 
-  /* ── Renderizar tabla con filtro y orden activos ──────────*/
   function renderTable() {
     if (!agentSnapshot.length) return;
-
-    // 1. Filtrar
     let lista = agentSnapshot.filter(a => {
       const isOnline = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
       if (activeFilter === 'online')  return isOnline;
@@ -1709,16 +2168,12 @@
       return true;
     });
 
-    // 2. Ordenar
     const dir = sortDir[activeSort] ?? (activeSort === 'nombre' || activeSort === 'estado' ? 1 : -1);
     lista = [...lista].sort((a, b) => {
       switch (activeSort) {
-        case 'nombre':
-          return dir * a.nombre.localeCompare(b.nombre, 'es');
-        case 'chats':
-          return dir * ((a.total_conversaciones||0) - (b.total_conversaciones||0));
-        case 'offline':
-          return dir * ((a.tiempo_desconectado_minutos||0) - (b.tiempo_desconectado_minutos||0));
+        case 'nombre': return dir * a.nombre.localeCompare(b.nombre, 'es');
+        case 'chats': return dir * ((a.total_conversaciones||0) - (b.total_conversaciones||0));
+        case 'offline': return dir * ((a.tiempo_desconectado_minutos||0) - (b.tiempo_desconectado_minutos||0));
         case 'estado': default: {
           const aOn = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
           const bOn = b.estado === 'online' || (b.estado === 'offline' && (b.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
@@ -1728,11 +2183,8 @@
       }
     });
 
-    // 3. Badge con conteo
-    const label = activeFilter === 'all' ? `${agentSnapshot.length} agentes` : `${lista.length} / ${agentSnapshot.length} agentes`;
-    document.getElementById('total-badge').textContent = label;
+    document.getElementById('total-badge').textContent = activeFilter === 'all' ? `${agentSnapshot.length} agentes` : `${lista.length} / ${agentSnapshot.length} agentes`;
 
-    // 4. Filas
     const rows = lista.map(agent => {
       const isOnline   = agent.estado === 'online' || (agent.estado === 'offline' && (agent.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
       const mins       = agent.tiempo_desconectado_minutos || 0;
@@ -1748,61 +2200,158 @@
         <td><span class="mins ${isOnline ? 'low' : minsColor(mins)}">${isOnline ? '—' : formatMins(mins)}</span></td>
         <td class="bar-col"><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${barColor(mins)};"></div></div></div></td>
         <td style="text-align:right; padding-right:16px;">
-          ${chats > 0 ? `<button class="btn-expand ${isExpanded ? 'active' : ''}" onclick="toggleConvs(${agent.id_agente}, this)" title="Ver conversaciones">
-            💬 <span class="expand-arrow">${isExpanded ? '▲' : '▼'}</span>
-          </button>` : '<span style="color:var(--text-dark);font-size:12px;">—</span>'}
+          ${chats > 0 ? `<button class="btn-expand ${isExpanded ? 'active' : ''}" onclick="toggleConvs(${agent.id_agente}, this)">💬 <span class="expand-arrow">${isExpanded ? '▲' : '▼'}</span></button>` : '<span style="color:var(--text-dark);font-size:12px;">—</span>'}
         </td>
       </tr>`;
-
-      const expandRow = isExpanded ? `<tr class="conv-expand-row" id="convs-${agent.id_agente}">
-        <td colspan="6" style="padding:0;">
-          <div class="conv-expand-inner" id="convs-inner-${agent.id_agente}">
-            <div class="conv-loading">⏳ Cargando conversaciones...</div>
-          </div>
-        </td>
-      </tr>` : '';
-
+      const expandRow = isExpanded ? `<tr class="conv-expand-row" id="convs-${agent.id_agente}"><td colspan="6" style="padding:0;"><div class="conv-expand-inner" id="convs-inner-${agent.id_agente}"><div class="conv-loading">⏳ Cargando...</div></div></td></tr>` : '';
       return mainRow + expandRow;
-    }).join('') || `<tr><td colspan="6" style="padding:28px;text-align:center;color:var(--text-dark);font-size:14px;">Sin agentes para mostrar</td></tr>`;
+    }).join('') || `<tr><td colspan="6" style="padding:28px;text-align:center;color:var(--text-dark);">Sin agentes</td></tr>`;
 
-    document.getElementById('table-container').innerHTML = `
-      <table>
-        <thead><tr><th>Agente</th><th>Estado</th><th>Chats</th><th>T. offline</th><th class="bar-th"></th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-
-    // Re-cargar datos de filas que estaban expandidas
-    expandedAgents.forEach(id => {
-      const inner = document.getElementById(`convs-inner-${id}`);
-      if (inner) loadConvs(id);
-    });
+    document.getElementById('table-container').innerHTML = `<table><thead><tr><th>Agente</th><th>Estado</th><th>Chats</th><th>T. offline</th><th class="bar-th"></th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    expandedAgents.forEach(id => { if (document.getElementById(`convs-inner-${id}`)) loadConvs(id); });
   }
 
-  /* ── Cambiar filtro ───────────────────────────────────────*/
   function setFilter(f) {
     activeFilter = f;
-    document.querySelectorAll('.filter-chip[data-filter]').forEach(btn =>
-      btn.classList.toggle('active', btn.dataset.filter === f));
+    document.querySelectorAll('.filter-chip[data-filter]').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === f));
     renderTable();
   }
 
-  /* ── Cambiar ordenamiento ─────────────────────────────────*/
   function setSort(s) {
-    if (activeSort === s) {
-      sortDir[s] = (sortDir[s] ?? 1) * -1;
-    } else {
-      activeSort = s;
-      if (sortDir[s] === undefined) sortDir[s] = (s === 'nombre' || s === 'estado') ? 1 : -1;
-    }
+    if (activeSort === s) { sortDir[s] = (sortDir[s] ?? 1) * -1; }
+    else { activeSort = s; if (sortDir[s] === undefined) sortDir[s] = (s === 'nombre' || s === 'estado') ? 1 : -1; }
     const labels = { estado: 'Estado', nombre: 'A–Z', chats: 'Chats', offline: 'T. Offline' };
     document.querySelectorAll('.sort-chip').forEach(btn => {
       const isActive = btn.dataset.sort === activeSort;
       btn.classList.toggle('active', isActive);
-      btn.innerHTML = isActive
-        ? `${labels[btn.dataset.sort]}<span class="sort-dir"> ${sortDir[activeSort] === 1 ? '↑' : '↓'}</span>`
-        : labels[btn.dataset.sort];
+      btn.innerHTML = isActive ? `${labels[btn.dataset.sort]}<span class="sort-dir"> ${sortDir[activeSort] === 1 ? '↑' : '↓'}</span>` : labels[btn.dataset.sort];
     });
     renderTable();
+  }
+
+  /* ── Lógica de la nueva pestaña OPS (Tickets) ─────────────*/
+  const opsFiltersConfig = [
+    { name: "Abiertos (G4)", query: "state_id:2 AND group_id:4", id: 2, icon: '🟢', color: 'green' },
+    { name: "En Proceso (G4)", query: "state_id:7 AND group_id:4", id: 7, icon: '🔵', color: 'blue' },
+    { name: "Pendientes (G4)", query: "state_id:8 AND group_id:4", id: 8, icon: '🟠', color: 'amber' },
+    { name: "Demanda (G10)", query: "state_id:9 AND group_id:10", id: 9, icon: '🔴', color: 'red' }
+  ];
+
+  function formatOpsTime(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toLocaleDateString('es-HN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function fetchOpsData() {
+    try {
+      const promises = opsFiltersConfig.map(async (config) => {
+        const response = await fetch(WEBHOOK_OPS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            secret: WEBHOOK_SECRET,
+            query: config.query
+          })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+
+        let tickets_brutos = [];
+
+        if (Array.isArray(data)) {
+          if (data.length === 1 && data[0].tickets) {
+            tickets_brutos = data[0].tickets;
+          } else {
+            tickets_brutos = data;
+          }
+        }
+        else if (data && Array.isArray(data.tickets)) {
+          tickets_brutos = data.tickets;
+        }
+        else if (data && (data.message || data.error)) {
+          throw new Error(data.error || data.message);
+        }
+        else if (typeof data === 'object' && data !== null) {
+          tickets_brutos = [data];
+        }
+
+        const tickets_reales = Array.isArray(tickets_brutos)
+          ? tickets_brutos.filter(t => t.state_id === config.id)
+          : [];
+
+        return { ...config, tickets: tickets_reales };
+      });
+
+      const results = await Promise.all(promises);
+      renderOpsUI(results);
+
+    } catch (err) {
+      console.error("Error OPS:", err);
+      document.getElementById('ops-content').innerHTML = `
+        <div class="error" style="background: var(--red-card); border-radius: 12px; margin: 20px; padding: 30px;">
+          <h3 style="font-size:16px; margin-bottom:12px;">⚠️ Error de Respuesta en OPS / n8n</h3>
+          <p style="font-size:14px; color:var(--text-main); font-weight:600; font-family:monospace;">${err.message}</p>
+          <p style="margin-top:16px; font-size:13px; color: var(--text-dark); line-height:1.5;">
+            *Si ves un mensaje como "Workflow execution failed", "Unauthorized" o algo parecido, revisa las <b>Executions</b> en tu n8n.<br>
+            Es sumamente probable que el nodo "Consultar OPS API" esté fallando por token o problemas de conexión en la ruta de Zammad.
+          </p>
+        </div>`;
+    }
+  }
+
+  function renderOpsUI(results) {
+    results.forEach((res, i) => {
+      // Actualizar Tab OPS
+      const countEl = document.getElementById(`ops-count-${i}`);
+      if (countEl) animateValue(countEl, res.tickets.length);
+
+      // Actualizar Tab Central (Nueva Fila de OPS)
+      const centralCountEl = document.getElementById(`central-ops-count-${i}`);
+      if (centralCountEl) animateValue(centralCountEl, res.tickets.length);
+    });
+
+    const columnsHtml = results.map(res => {
+      const ticketsHtml = res.tickets.length > 0
+        ? res.tickets.map(t => {
+            // URL de Zammad. Usa t.id (id interno)
+            const zammadUrl = `https://ops.multicable.hn/#ticket/zoom/${t.id}`;
+            const timeInfo = t.created_at ? `<div class="ops-ticket-time">🕐 Creado: ${formatOpsTime(t.created_at)}</div>` : '';
+
+            return `
+            <a href="${zammadUrl}" target="_blank" rel="noopener" class="ops-ticket" style="border-left-color: var(--${res.color}-text);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <span class="ops-ticket-id" title="Click para copiar" onclick="copyTicket(event, '${t.number}')">#${t.number}</span>
+                <span class="ops-ticket-action">Abrir ↗</span>
+              </div>
+              <div class="ops-ticket-title">${t.title}</div>
+              ${timeInfo}
+            </a>
+          `}).join('')
+        : `<div class="history-empty" style="padding: 20px 10px; background: rgba(0,0,0,0.1); border-radius: 8px; border: 1px dashed var(--border-light);">🎉 Nada por aquí</div>`;
+
+      // Remover "(G4)" o "(G10)" para que se vea limpio
+      const cleanName = res.name.split(' (')[0];
+
+      return `
+        <div class="ops-col">
+          <div class="ops-col-title" style="color: var(--${res.color}-text);">
+            ${res.icon} ${cleanName}
+            <span style="font-size:11px; opacity:0.7; font-weight:500;">(${res.tickets.length})</span>
+          </div>
+          <div class="ops-ticket-list" style="display: flex; flex-direction: column; gap: 12px;">
+            ${ticketsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('ops-content').innerHTML = `
+      <div class="ops-grid">
+        ${columnsHtml}
+      </div>
+    `;
   }
 
   /* ── Lógica del Temporizador Circular Sincronizado ────────*/
@@ -1812,70 +2361,66 @@
   function updateTimerUI() {
     const timeEl = document.getElementById('refresh-time');
     const circle = document.getElementById('refresh-circle');
-    
+    const opsTimeEl = document.getElementById('ops-refresh-time');
+    const opsCircle = document.getElementById('ops-refresh-circle');
+    const centralTimeEl = document.getElementById('central-refresh-time');
+    const centralCircle = document.getElementById('central-refresh-circle');
+
     if(timeEl) timeEl.textContent = countdown;
-    
-    // Calcular porcentaje de llenado (100 a 0)
+    if(opsTimeEl) opsTimeEl.textContent = countdown;
+    if(centralTimeEl) centralTimeEl.textContent = countdown;
+
     const pct = (countdown / 10) * 100;
-    if(circle) {
-      circle.style.strokeDasharray = `${pct}, 100`;
-      
-      // Cambiar color progresivamente
-      if (countdown <= 3) {
-        circle.style.stroke = 'var(--red-text)';
-      } else if (countdown <= 6) {
-        circle.style.stroke = 'var(--amber-text)';
-      } else {
-        circle.style.stroke = 'var(--blue-text)';
+
+    [circle, opsCircle, centralCircle].forEach(circ => {
+      if(circ) {
+        circ.style.strokeDasharray = `${pct}, 100`;
+        if (countdown <= 3) circ.style.stroke = 'var(--red-text)';
+        else if (countdown <= 6) circ.style.stroke = 'var(--amber-text)';
+        else circ.style.stroke = 'var(--blue-text)';
       }
-    }
+    });
   }
 
   async function fetchAll() {
-    // Al pedir datos, reiniciamos el temporizador a 10s y actualizamos UI
     countdown = 10;
     updateTimerUI();
-    
+
+    // Siempre cargar datos de Chatwoot (para Tab Agentes y Tab Central)
     await Promise.all([fetchConversations(), fetchAgents()]);
-    
-    // Si la DB cruda está visible, la sincronizamos con este mismo ciclo
-    const rawSection = document.getElementById('raw-section');
-    if (rawSection && rawSection.style.display !== 'none') {
-      fetchRaw();
+
+    // Cargar datos de OPS solo si estamos en Tab OPS o Tab Central
+    if (currentTab === 'ops' || currentTab === 'central') {
+      await fetchOpsData();
     }
+
+    const rawSection = document.getElementById('raw-section');
+    if (rawSection && rawSection.style.display !== 'none') fetchRaw();
   }
 
   function startTimer() {
-    updateTimerUI(); // Update UI de inicio
-    
+    updateTimerUI();
     if (countdownInterval) clearInterval(countdownInterval);
     countdownInterval = setInterval(() => {
       countdown--;
       if (countdown <= 0) {
-        fetchAll(); // Esto reinicia el counter a 10 de nuevo
+        fetchAll();
       } else {
         updateTimerUI();
       }
     }, 1000);
   }
 
-  // Inicializar todo
   fetchAll();
   startTimer();
 
   function toggleRaw() {
     const section = document.getElementById('raw-section');
     const btn     = document.getElementById('raw-toggle');
-
     if (section.style.display === 'none') {
-      section.style.display = 'block';
-      btn.textContent = 'Ocultar';
-      btn.style.color = 'var(--blue-text)';
-      fetchRaw();
+      section.style.display = 'block'; btn.textContent = 'Ocultar'; btn.style.color = 'var(--blue-text)'; fetchRaw();
     } else {
-      section.style.display = 'none';
-      btn.textContent = 'Mostrar';
-      btn.style.color = 'var(--text-muted)';
+      section.style.display = 'none'; btn.textContent = 'Mostrar'; btn.style.color = 'var(--text-muted)';
     }
   }
 
@@ -1883,14 +2428,9 @@
     const tbody   = document.getElementById('raw-tbody');
     const section = document.getElementById('raw-section');
     if (!tbody || section.style.display === 'none') return;
-
     try {
-      const res  = await fetch(
-        `${SUPABASE_URL}/rest/v1/naty_logs?select=*&order=id_agente.asc`,
-        { headers: HEADERS }
-      );
+      const res  = await fetch(`${SUPABASE_URL}/rest/v1/naty_logs?select=*&order=id_agente.asc`, { headers: HEADERS });
       const logs = await res.json();
-
       tbody.innerHTML = logs.map((r, i) => `
         <tr style="border-bottom:1px solid var(--border-light); ${i % 2 === 0 ? 'background:var(--row-alt);' : ''}">
           <td style="padding:10px 16px; color:var(--blue-text); white-space:nowrap; font-weight:600;">${r.id_agente}</td>
@@ -1901,404 +2441,191 @@
           <td style="padding:10px 16px; color:var(--purple-text); white-space:nowrap; font-weight:600;">${r.total_conversaciones ?? '—'}</td>
           <td style="padding:10px 16px; color:var(--text-muted); white-space:nowrap;">${r.ultimo_chequeo ?? '—'}</td>
         </tr>`).join('');
-
-    } catch(e) {
-      tbody.innerHTML = `<tr><td colspan="7" style="padding:20px; color:var(--red-text); text-align:center; font-weight:600;">Error: ${e.message}</td></tr>`;
-    }
+    } catch(e) {}
   }
 
-  /* ══════════════════════════════════════════════════════════
-     ASIGNACIÓN AUTOMÁTICA DE CONVERSACIONES SIN ASIGNAR
-     ══════════════════════════════════════════════════════════
-     Criterios de elegibilidad:
-       • online             → siempre elegible
-       • offline ≤ 15 min   → elegible (puede haber salido un momento)
-       • offline > 15 min   → excluido (ya salió de turno)
-     Distribución:
-       • Ordenar por total_conversaciones ASC (menos cargados primero)
-       • Round-robin ponderado: re-ordenar tras cada asignación
-       • Sin corte por límite: si todos tienen 10+ se sigue asignando igual
-  ══════════════════════════════════════════════════════════ */
   async function assignAll() {
-    const btn      = document.getElementById('btn-assign');
+    const btn = document.getElementById('btn-assign');
     const statusEl = document.getElementById('assign-status');
-
-    btn.disabled    = true;
-    btn.textContent = '⏳ Asignando...';
-    statusEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = '⏳ Asignando...'; statusEl.style.display = 'none';
 
     try {
-      if (agentSnapshot.length === 0) {
-        showAssignStatus('warn', '⚠️ Esperando datos de agentes, intenta de nuevo.');
-        return;
-      }
-
-      // Enviar agentes + secreto al webhook de n8n.
-      // n8n busca las conversaciones sin asignar internamente (sin CORS).
+      if (agentSnapshot.length === 0) { showAssignStatus('warn', '⚠️ Esperando datos de agentes.'); return; }
       const payload = {
         secret: WEBHOOK_SECRET,
         agentes: agentSnapshot.map(a => ({
-          id_agente:                   a.id_agente,
-          nombre:                      a.nombre,
-          estado:                      a.estado,
-          tiempo_desconectado_minutos: a.tiempo_desconectado_minutos || 0,
-          total_conversaciones:        a.total_conversaciones        || 0,
-          en_llamadas:                 agentesEnLlamadas.has(a.id_agente)
+          id_agente: a.id_agente, nombre: a.nombre, estado: a.estado,
+          tiempo_desconectado_minutos: a.tiempo_desconectado_minutos || 0, total_conversaciones: a.total_conversaciones || 0,
+          en_llamadas: agentesEnLlamadas.has(a.id_agente)
         }))
       };
-
-      const wRes = await fetch(WEBHOOK_ASIGNAR, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload)
-      });
-
-      if (!wRes.ok) throw new Error(`Webhook error ${wRes.status}`);
-
+      const wRes = await fetch(WEBHOOK_ASIGNAR, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const result = await wRes.json();
 
-      if (result.motivo === 'secreto_invalido') {
-        showAssignStatus('error', '❌ Acceso no autorizado.');
-      } else if (result.motivo === 'sin_agentes') {
-        showAssignStatus('warn', '⚠️ Sin agentes disponibles. Todos offline > 15 min.');
-      } else if (result.motivo === 'sin_conversaciones') {
-        showAssignStatus('success', '✅ No hay conversaciones sin asignar.');
-      } else {
+      if (result.motivo === 'secreto_invalido') showAssignStatus('error', '❌ Acceso no autorizado.');
+      else if (result.motivo === 'sin_agentes') showAssignStatus('warn', '⚠️ Sin agentes disponibles.');
+      else if (result.motivo === 'sin_conversaciones') showAssignStatus('success', '✅ No hay chats sin asignar.');
+      else {
         const { ok = 0, fail = 0 } = result;
-        const msg = fail === 0
-          ? `✅ ${ok} conversación${ok !== 1 ? 'es' : ''} asignada${ok !== 1 ? 's' : ''}.`
-          : `⚠️ ${ok} asignadas, ${fail} con error.`;
-        showAssignStatus(fail === 0 ? 'success' : 'warn', msg);
-
-        // Registrar en historial si hubo asignaciones
-        if (ok > 0) {
-          pushEvent({
-            emoji:  '⚡',
-            color:  'var(--blue-text)',
-            bgIcon: 'var(--blue-bg)',
-            title:  `${ok} conversación${ok !== 1 ? 'es' : ''} asignada${ok !== 1 ? 's' : ''}`,
-            detail: fail > 0 ? `${fail} con error` : 'Asignación automática completada',
-            type:   'hev-assign'
-          });
-        }
+        showAssignStatus(fail === 0 ? 'success' : 'warn', fail === 0 ? `✅ ${ok} asignada(s).` : `⚠️ ${ok} asignadas, ${fail} con error.`);
+        if (ok > 0) pushEvent({ emoji: '⚡', color: 'var(--blue-text)', bgIcon: 'var(--blue-bg)', title: `${ok} chat(s) asignados`, detail: fail > 0 ? `${fail} con error` : 'Automático completado', type: 'hev-assign' });
       }
-
       setTimeout(fetchAll, 1500);
-
-    } catch (e) {
-      showAssignStatus('error', `❌ ${e.message}`);
-    } finally {
-      btn.disabled    = false;
-      btn.textContent = '⚡ Asignar conversaciones';
-    }
+    } catch (e) { showAssignStatus('error', `❌ ${e.message}`); }
+    finally { btn.disabled = false; btn.textContent = '⚡ Asignar conversaciones'; }
   }
 
   function showAssignStatus(type, msg) {
     const el = document.getElementById('assign-status');
-    el.textContent  = msg;
-    el.className    = 'assign-status ' + type;
-    el.style.display = 'block';
+    el.textContent  = msg; el.className = 'assign-status ' + type; el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 7000);
   }
 
-  /* ── Toggle fila expandida de conversaciones ──────────────*/
   function toggleConvs(agentId, btn) {
-    if (expandedAgents.has(agentId)) {
-      expandedAgents.delete(agentId);
-    } else {
-      expandedAgents.add(agentId);
-    }
+    expandedAgents.has(agentId) ? expandedAgents.delete(agentId) : expandedAgents.add(agentId);
     renderTable();
   }
 
-  /* ── Cargar conversaciones del agente vía webhook n8n ─────*/
   async function loadConvs(agentId) {
     const inner = document.getElementById(`convs-inner-${agentId}`);
     if (!inner) return;
-
     try {
-      const res = await fetch(WEBHOOK_CONVS, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ secret: WEBHOOK_SECRET, agent_id: agentId })
-      });
-
-      if (!res.ok) throw new Error(`Webhook error ${res.status}`);
-
+      const res = await fetch(WEBHOOK_CONVS, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: WEBHOOK_SECRET, agent_id: agentId }) });
       const data  = await res.json();
       const convs = data?.convs || [];
-
-      if (convs.length === 0) {
-        inner.innerHTML = `<div class="conv-empty">Sin conversaciones activas asignadas</div>`;
-        return;
-      }
+      if (convs.length === 0) { inner.innerHTML = `<div class=\"conv-empty\">Sin chats activas</div>`; return; }
 
       const ahora = Date.now();
-
-      // Opciones de agentes para el dropdown (todos los del snapshot)
-      const agentOpts = agentSnapshot
-        .filter(a => a.id_agente !== agentId)
-        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-        .map(a => {
-          const isOnline = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
-          const dot = isOnline ? '🟢' : '🔴';
-          const chats = a.total_conversaciones || 0;
-          return `<option value="${a.id_agente}" data-nombre="${a.nombre}">${dot} ${a.nombre} (${chats} chats)</option>`;
-        }).join('');
+      const agentOpts = agentSnapshot.filter(a => a.id_agente !== agentId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map(a => {
+        const isOnline = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
+        return `<option value="${a.id_agente}" data-nombre="${a.nombre}">${isOnline?'🟢':'🔴'} ${a.nombre} (${a.total_conversaciones||0})</option>`;
+      }).join('');
 
       inner.innerHTML = convs.map(c => {
-        const convUrl       = `${CHATWOOT_BASE}/app/accounts/1/team/${CHATWOOT_TEAM}/conversations/${c.id}`;
-        const diffMs        = c.created_at ? ahora - (c.created_at * 1000) : null;
-        const tiempoAbierta = diffMs !== null ? formatMsAge(diffMs) : '—';
-
-        return `<div class="conv-item" id="conv-item-${c.id}">
-          <div class="conv-item-left">
-            <span class="conv-id">#${c.id}</span>
-            <span class="conv-contact">${c.contact_name}</span>
+        const convUrl = `${CHATWOOT_BASE}/app/accounts/1/team/${CHATWOOT_TEAM}/conversations/${c.id}`;
+        const tiempoAbierta = c.created_at ? formatMsAge(ahora - (c.created_at * 1000)) : '—';
+        return `<div class=\"conv-item\" id=\"conv-item-${c.id}\">
+          <div class=\"conv-item-left\"><span class=\"conv-id\" title=\"Copiar ID\" onclick=\"copyTicket(event, '${c.id}')\">#${c.id}</span><span class=\"conv-contact\">${c.contact_name}</span></div>
+          <div class=\"conv-item-right\">
+            <span class=\"conv-age\">🕐 ${tiempoAbierta}</span>
+            <a class=\"conv-link\" href=\"${convUrl}\" target=\"_blank\">Abrir ↗</a>
+            <button class=\"btn-reassign-toggle\" onclick=\"toggleReassignPanel(${c.id})\">🔄</button>
           </div>
-          <div class="conv-item-right">
-            <span class="conv-age">🕐 ${tiempoAbierta}</span>
-            <a class="conv-link" href="${convUrl}" target="_blank" rel="noopener">Abrir ↗</a>
-            <button class="btn-reassign-toggle" onclick="toggleReassignPanel(${c.id})" title="Reasignar conversación">
-              🔄 Reasignar
-            </button>
-          </div>
-          <!-- Panel de reasignación (oculto por defecto) -->
-          <div class="reassign-panel" id="reassign-panel-${c.id}" style="display:none;">
-            <select class="reassign-select" id="reassign-select-${c.id}">
-              <option value="">— Seleccionar agente —</option>
-              ${agentOpts}
-            </select>
-            <button class="btn-reassign-confirm" onclick="confirmReassign(${c.id}, ${agentId})">
-              ✅ Confirmar
-            </button>
-            <button class="btn-reassign-cancel" onclick="toggleReassignPanel(${c.id})">
-              ✕
-            </button>
-            <span class="reassign-status" id="reassign-status-${c.id}"></span>
+          <div class=\"reassign-panel\" id=\"reassign-panel-${c.id}\" style=\"display:none;\">
+            <select class=\"reassign-select\" id=\"reassign-select-${c.id}\"><option value=\"\">— Seleccionar —</option>${agentOpts}</select>
+            <button class=\"btn-reassign-confirm\" onclick=\"confirmReassign(${c.id}, ${agentId})\">✅</button>
+            <button class=\"btn-reassign-cancel\" onclick=\"toggleReassignPanel(${c.id})\">✕</button>
+            <span class=\"reassign-status\" id=\"reassign-status-${c.id}\"></span>
           </div>
         </div>`;
       }).join('');
-
-    } catch(e) {
-      inner.innerHTML = `<div class="conv-empty" style="color:var(--red-text);">Error: ${e.message}</div>`;
-    }
+    } catch(e) { inner.innerHTML = `<div class=\"conv-empty\" style=\"color:var(--red-text);\">Error</div>`; }
   }
 
-  /* ── Toggle panel de reasignación ────────────────────────*/
   function toggleReassignPanel(convId) {
     const panel = document.getElementById(`reassign-panel-${convId}`);
     if (!panel) return;
     const isOpen = panel.style.display !== 'none';
     panel.style.display = isOpen ? 'none' : 'flex';
-    if (!isOpen) document.getElementById(`reassign-select-${convId}`)?.focus();
   }
 
-  /* ── Confirmar reasignación ───────────────────────────────*/
   async function confirmReassign(convId, fromAgentId) {
-    const select     = document.getElementById(`reassign-select-${convId}`);
-    const statusEl   = document.getElementById(`reassign-status-${convId}`);
+    const select = document.getElementById(`reassign-select-${convId}`);
+    const statusEl = document.getElementById(`reassign-status-${convId}`);
     const confirmBtn = select?.closest('.reassign-panel')?.querySelector('.btn-reassign-confirm');
-
-    const agentId    = parseInt(select?.value);
+    const agentId = parseInt(select?.value);
     const agentNombre = select?.options[select.selectedIndex]?.dataset.nombre || '';
+    if (!agentId) return;
 
-    if (!agentId) {
-      statusEl.textContent  = '⚠️ Selecciona un agente';
-      statusEl.style.color  = 'var(--amber-text)';
-      return;
-    }
-
-    confirmBtn.disabled   = true;
-    confirmBtn.textContent = '⏳';
-    statusEl.textContent   = '';
-
+    confirmBtn.disabled = true; confirmBtn.textContent = '⏳'; statusEl.textContent = '';
     try {
-      const res = await fetch(WEBHOOK_REASIGNAR, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          secret:        WEBHOOK_SECRET,
-          conv_id:       convId,
-          agent_id:      agentId,
-          agent_nombre:  agentNombre
-        })
-      });
-
-      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const res = await fetch(WEBHOOK_REASIGNAR, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: WEBHOOK_SECRET, conv_id: convId, agent_id: agentId, agent_nombre: agentNombre }) });
       const result = await res.json();
-
       if (result.ok) {
-        // Marcar visualmente la conv como reasignada
-        const convItem = document.getElementById(`conv-item-${convId}`);
-        if (convItem) {
-          convItem.style.opacity   = '0.45';
-          convItem.style.pointerEvents = 'none';
-        }
-        statusEl.textContent = `✅ Asignado a ${agentNombre}`;
-        statusEl.style.color = 'var(--green-text)';
-
-        // Registrar en historial
-        pushEvent({
-          emoji:  '🔄',
-          color:  'var(--blue-text)',
-          bgIcon: 'var(--blue-bg)',
-          title:  `Conv #${convId} reasignada`,
-          detail: `Asignada a ${agentNombre}`,
-          type:   'hev-assign'
-        });
-
-        // Refrescar tabla tras 1.5s
-        setTimeout(() => {
-          expandedAgents.delete(fromAgentId);
-          fetchAll();
-        }, 1500);
-
-      } else {
-        throw new Error(result.motivo || 'Error desconocido');
-      }
-
+        document.getElementById(`conv-item-${convId}`).style.opacity = '0.45';
+        statusEl.textContent = `✅ Asignado`; statusEl.style.color = 'var(--green-text)';
+        pushEvent({ emoji: '🔄', color: 'var(--blue-text)', bgIcon: 'var(--blue-bg)', title: `Conv #${convId} reasignada`, detail: `A ${agentNombre}`, type: 'hev-assign' });
+        setTimeout(() => { expandedAgents.delete(fromAgentId); fetchAll(); }, 1500);
+      } else { throw new Error(result.motivo || 'Error'); }
     } catch(e) {
-      statusEl.textContent = `❌ ${e.message}`;
-      statusEl.style.color = 'var(--red-text)';
-      confirmBtn.disabled   = false;
-      confirmBtn.textContent = '✅ Confirmar';
+      statusEl.textContent = `❌ Error`; statusEl.style.color = 'var(--red-text)';
+      confirmBtn.disabled = false; confirmBtn.textContent = '✅';
     }
   }
 
-  /* ── Formatear edad de conversación ──────────────────────*/
-  /* ── Sección agentes en llamadas ─────────────────────────*/
   function toggleLlamadas() {
     const section = document.getElementById('llamadas-section');
-    const btn     = document.getElementById('llamadas-toggle');
-    const isOpen  = section.style.display !== 'none';
+    const btn = document.getElementById('llamadas-toggle');
+    const isOpen = section.style.display !== 'none';
     section.style.display = isOpen ? 'none' : 'block';
     btn.textContent = isOpen ? 'Mostrar' : 'Ocultar';
-    btn.style.color = isOpen ? 'var(--text-muted)' : 'var(--blue-text)';
     if (!isOpen) renderLlamadasList();
   }
 
   function renderLlamadasList() {
     const list = document.getElementById('llamadas-list');
     const badge = document.getElementById('llamadas-count-badge');
-    if (!list) return;
+    if (!list || !agentSnapshot.length) return;
 
-    if (!agentSnapshot.length) {
-      list.innerHTML = `<div style="color:var(--text-dark);font-size:13px;padding:8px 0;">
-        Espera a que carguen los datos...</div>`;
-      return;
-    }
-
-    badge.textContent = `${agentesEnLlamadas.size} marcado${agentesEnLlamadas.size !== 1 ? 's' : ''}`;
-
-    const sorted = [...agentSnapshot].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-
-    list.innerHTML = sorted.map(a => {
+    badge.textContent = `${agentesEnLlamadas.size} marcados`;
+    list.innerHTML = [...agentSnapshot].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map(a => {
       const marcado = agentesEnLlamadas.has(a.id_agente);
       const isOnline = a.estado === 'online' || (a.estado === 'offline' && (a.tiempo_desconectado_minutos||0) < OFFLINE_THRESHOLD);
-      const dotColor = isOnline ? 'var(--green-text)' : 'var(--red-text)';
-      return `<button
-        class="llamada-chip ${marcado ? 'marcado' : ''}"
-        onclick="toggleAgenteLlamada(${a.id_agente})"
-        title="${marcado ? 'Quitar marca de llamadas' : 'Marcar como en llamadas'}">
-        <span class="chip-dot" style="background:${dotColor};"></span>
-        ${a.nombre}
-        ${marcado ? '📞' : ''}
-      </button>`;
+      return `<button class=\"llamada-chip ${marcado ? 'marcado' : ''}\" onclick=\"toggleAgenteLlamada(${a.id_agente})\">
+        <span class=\"chip-dot\" style=\"background:${isOnline ? 'var(--green-text)' : 'var(--red-text)'};\"></span>
+        ${a.nombre} ${marcado ? '📞' : ''}</button>`;
     }).join('');
   }
 
   function toggleAgenteLlamada(agentId) {
-    if (agentesEnLlamadas.has(agentId)) {
-      agentesEnLlamadas.delete(agentId);
-    } else {
-      agentesEnLlamadas.add(agentId);
-    }
-    // Persistir en localStorage
+    agentesEnLlamadas.has(agentId) ? agentesEnLlamadas.delete(agentId) : agentesEnLlamadas.add(agentId);
     localStorage.setItem('naty-llamadas', JSON.stringify([...agentesEnLlamadas]));
     renderLlamadasList();
-    // Actualizar badge del header
-    const badge = document.getElementById('llamadas-count-badge');
-    if (badge) badge.textContent = `${agentesEnLlamadas.size} marcado${agentesEnLlamadas.size !== 1 ? 's' : ''}`;
   }
 
-  /* ── Escribir evento en Supabase (alerta sin asignar) ─────*/
   async function logEventToSupabase(tipo, emoji, titulo, detalle, metadata = {}) {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/naty_eventos`, {
-        method:  'POST',
-        headers: { ...HEADERS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ tipo, emoji, titulo, detalle, metadata })
-      });
-    } catch(e) {
-      console.warn('Error guardando evento:', e.message);
-    }
+    try { await fetch(`${SUPABASE_URL}/rest/v1/naty_eventos`, { method: 'POST', headers: { ...HEADERS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ tipo, emoji, titulo, detalle, metadata }) }); } catch(e) {}
   }
 
-  /* ── Toggle historial persistente ─────────────────────────*/
   function togglePersistentHistory() {
     const section = document.getElementById('persistent-history-section');
-    const btn     = document.getElementById('persistent-history-toggle');
-    const isOpen  = section.style.display !== 'none';
+    const btn = document.getElementById('persistent-history-toggle');
+    const isOpen = section.style.display !== 'none';
     section.style.display = isOpen ? 'none' : 'block';
     btn.textContent = isOpen ? 'Mostrar' : 'Ocultar';
-    btn.style.color = isOpen ? 'var(--text-muted)' : 'var(--blue-text)';
     if (!isOpen) fetchPersistentHistory();
   }
 
-  /* ── Leer historial de Supabase (últimos 7 días) ──────────*/
   async function fetchPersistentHistory() {
-    const list    = document.getElementById('persistent-history-list');
-    const countEl = document.getElementById('persistent-history-count');
-    list.innerHTML = `<div class="history-empty">Cargando...</div>`;
+    const list = document.getElementById('persistent-history-list');
+    list.innerHTML = `<div class=\"history-empty\">Cargando...</div>`;
     try {
       const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const res   = await fetch(
-        `${SUPABASE_URL}/rest/v1/naty_eventos?select=*&created_at=gte.${since}&order=created_at.desc&limit=100`,
-        { headers: HEADERS }
-      );
-      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/naty_eventos?select=*&created_at=gte.${since}&order=created_at.desc&limit=100`, { headers: HEADERS });
       const eventos = await res.json();
-      countEl.textContent = `${eventos.length} evento${eventos.length !== 1 ? 's' : ''}`;
-      if (eventos.length === 0) {
-        list.innerHTML = `<div class="history-empty">Sin eventos en los últimos 7 días</div>`;
-        return;
-      }
+      document.getElementById('persistent-history-count').textContent = `${eventos.length} eventos`;
+      if (eventos.length === 0) return list.innerHTML = `<div class=\"history-empty\">Sin eventos</div>`;
+
       const porDia = {};
-      for (const ev of eventos) {
+      eventos.forEach(ev => {
         const fecha = new Date(ev.created_at).toLocaleDateString('es-HN', { weekday: 'long', day: 'numeric', month: 'long' });
-        if (!porDia[fecha]) porDia[fecha] = [];
-        porDia[fecha].push(ev);
-      }
-      const tipoBg = { asignacion_auto: 'var(--blue-bg)', reasignacion: 'var(--blue-bg)', alerta_sin_asignar: 'var(--amber-bg)' };
-      const tipoCls = { asignacion_auto: 'hev-assign', reasignacion: 'hev-assign', alerta_sin_asignar: 'hev-alert' };
+        if (!porDia[fecha]) porDia[fecha] = []; porDia[fecha].push(ev);
+      });
       list.innerHTML = Object.entries(porDia).map(([fecha, evs]) => `
-        <div class="history-day-header">${fecha}</div>
-        ${evs.map(ev => {
-          const hora = new Date(ev.created_at).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' });
-          return `<div class="history-item ${tipoCls[ev.tipo] || 'hev-assign'}">
-            <div class="history-item-icon" style="background:${tipoBg[ev.tipo] || 'var(--bg-hover)'};">${ev.emoji || '📋'}</div>
-            <div class="history-item-body">
-              <div class="history-item-title">${ev.titulo}</div>
-              <div class="history-item-sub">${ev.detalle || ''}</div>
-            </div>
-            <div class="history-item-time">${hora}</div>
-          </div>`;
-        }).join('')}`).join('');
-    } catch(e) {
-      list.innerHTML = `<div class="history-empty" style="color:var(--red-text);">Error: ${e.message}</div>`;
-    }
+        <div class=\"history-day-header\">${fecha}</div>
+        ${evs.map(ev => `<div class=\"history-item hev-assign\"><div class=\"history-item-icon\" style=\"background:var(--bg-hover);\">${ev.emoji || '📋'}</div>
+          <div class=\"history-item-body\"><div class=\"history-item-title\">${ev.titulo}</div><div class=\"history-item-sub\">${ev.detalle || ''}</div></div>
+          <div class=\"history-item-time\">${new Date(ev.created_at).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}</div></div>`).join('')}
+      `).join('');
+    } catch(e) { list.innerHTML = `<div class=\"history-empty\" style=\"color:var(--red-text);\">Error</div>`; }
   }
 
   function formatMsAge(ms) {
-    const mins  = Math.floor(ms / 60000);
-    const hours = Math.floor(mins / 60);
-    const days  = Math.floor(hours / 24);
-    if (days  > 0) return `${days}d ${hours % 24}h`;
+    const mins = Math.floor(ms / 60000), hours = Math.floor(mins / 60), days = Math.floor(hours / 24);
+    if (days > 0) return `${days}d ${hours % 24}h`;
     if (hours > 0) return `${hours}h ${mins % 60}m`;
     return `${mins}m`;
   }
-
 </script>
 </body>
 </html>
