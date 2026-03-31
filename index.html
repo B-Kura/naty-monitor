@@ -1199,6 +1199,49 @@
     font-weight: 500;
   }
 
+  /* ── Bridge Status Badge ──────────────────────────────────*/
+  .bridge-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
+    letter-spacing: 0.3px; transition: all 0.4s ease;
+    border: 1px solid;
+  }
+  .bridge-badge.active  { background: var(--green-bg); color: var(--green-text); border-color: var(--green-border); }
+  .bridge-badge.slow    { background: var(--amber-bg); color: var(--amber-text); border-color: var(--amber-border); }
+  .bridge-badge.down    { background: var(--red-bg);   color: var(--red-text);   border-color: var(--red-border); }
+  .bridge-badge.unknown { background: var(--bg-hover); color: var(--text-dark);  border-color: var(--border-main); }
+  .bridge-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .bridge-badge.active  .bridge-dot { background: var(--green-text); animation: pulse 2s infinite; }
+  .bridge-badge.slow    .bridge-dot { background: var(--amber-text); animation: pulse 2s infinite; }
+  .bridge-badge.down    .bridge-dot { background: var(--red-text); }
+  .bridge-badge.unknown .bridge-dot { background: var(--text-dark); }
+
+  /* ── Tiempo relativo PBX — rojo si stale ─────────────────*/
+  .pbx-age        { font-size: 12px; color: var(--text-dark); }
+  .pbx-age.stale  { color: var(--red-text); font-weight: 600; }
+
+  /* ── Tarjeta waiting pulsante si hay espera ───────────────*/
+  .chat-card.waiting-alert { border: 1px solid var(--red-border) !important; animation: waitingPulse 2s infinite; }
+  @keyframes waitingPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(251,113,133,0.0); }
+    50%       { box-shadow: 0 0 0 4px rgba(251,113,133,0.25); }
+  }
+
+  /* ── TV Mode PBX ──────────────────────────────────────────*/
+  body.tv-mode #pbx-filter-bar { display: none !important; }
+  body.tv-mode #pbx-timer-bar  { display: none !important; }
+
+  /* ── Skeleton loader PBX ──────────────────────────────────*/
+  .pbx-skeleton { padding: 20px 28px; display: flex; flex-direction: column; gap: 12px; }
+  .skeleton-row {
+    height: 48px; border-radius: 8px;
+    background: linear-gradient(90deg, var(--border-light) 25%, var(--bg-hover) 50%, var(--border-light) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
   /* ── Toasts Notifications (Mejoras QoL) ────────────────────*/
   #toast-container {
     position: fixed;
@@ -1305,7 +1348,7 @@
 <header>
   <div class="header-left">
     <div class="logo-dot"></div>
-    <h1>Monitoreo NOC — </h1>
+    <h1>Monitoreo NOC — <span style="color:var(--blue-text)">Multicable</span></h1>
   </div>
 
   <!-- Sistema de Pestañas -->
@@ -1664,6 +1707,16 @@
      PESTAÑA NUEVA: PBX (TELEFONÍA)
 =========================================== -->
 <div id="tab-pbx" class="tab-content">
+
+  <!-- Bridge Status Bar -->
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+    <span style="font-size:13px; font-weight:600; color:var(--text-muted);">Cola 6500 — NOC</span>
+    <span class="bridge-badge unknown" id="bridge-status-badge">
+      <span class="bridge-dot"></span>
+      <span id="bridge-status-text">Verificando bridge...</span>
+    </span>
+  </div>
+
   <div class="chat-counters ops-4col">
     <div class="chat-card glass-panel">
       <div class="chat-card-icon green">🟢</div>
@@ -1679,7 +1732,7 @@
         <div class="chat-card-value amber" id="pbx-count-busy">—</div>
       </div>
     </div>
-    <div class="chat-card glass-panel">
+    <div class="chat-card glass-panel" id="pbx-waiting-card">
       <div class="chat-card-icon red">⏳</div>
       <div class="chat-card-info">
         <div class="chat-card-label">Llamadas en Espera</div>
@@ -1696,8 +1749,7 @@
   </div>
 
   <div class="table-wrap glass-panel" style="background: transparent; border: none; box-shadow: none;">
-    <div class="table-header" style="justify-content: flex-end; background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 12px; margin-bottom: 16px;">
-      <!-- Temporizador Visual Clonado para PBX -->
+    <div id="pbx-timer-bar" class="table-header" style="justify-content: flex-end; background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 12px; margin-bottom: 16px;">
       <div class="refresh-indicator">
         <span>Próxima act.</span>
         <div class="circular-timer">
@@ -1719,7 +1771,7 @@
       </div>
 
       <!-- BARRA DE FILTROS PBX -->
-      <div class="filter-bar">
+      <div class="filter-bar" id="pbx-filter-bar">
         <div class="filter-group">
           <button class="filter-chip active" data-pbx-filter="all" onclick="setPbxFilter('all')">Todos</button>
           <button class="filter-chip" data-pbx-filter="online" onclick="setPbxFilter('online')">🟢 Libres</button>
@@ -1735,9 +1787,12 @@
       </div>
 
       <div id="pbx-table-container">
-        <div class="loading">
-          <div class="spinner"></div>
-          Cargando telemetría de la PBX...
+        <div class="pbx-skeleton">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
         </div>
       </div>
     </div>
@@ -2531,86 +2586,137 @@
     }
   }
 
+  /* ── Bridge Status Badge ──────────────────────────────────*/
+  function updateBridgeBadge(extensions) {
+    const badge = document.getElementById('bridge-status-badge');
+    const text  = document.getElementById('bridge-status-text');
+    if (!badge || !text || !extensions || extensions.length === 0) return;
+
+    // Tomar el updated_at más reciente de todas las extensiones
+    const latestMs = Math.max(...extensions.map(e => new Date(e.updated_at).getTime()));
+    const agoMs    = Date.now() - latestMs;
+    const agoMin   = Math.floor(agoMs / 60000);
+
+    badge.className = 'bridge-badge';
+    if (agoMs < 120000) {           // < 2 min
+      badge.classList.add('active');
+      text.textContent = `● Bridge activo (hace ${agoMin < 1 ? '<1' : agoMin} min)`;
+    } else if (agoMs < 300000) {    // 2–5 min
+      badge.classList.add('slow');
+      text.textContent = `● Bridge lento (hace ${agoMin} min)`;
+    } else {                        // > 5 min
+      badge.classList.add('down');
+      text.textContent = `● Bridge caído (hace ${agoMin} min)`;
+    }
+  }
+
+  /* ── Tiempo relativo ──────────────────────────────────────*/
+  function relativeTime(isoString) {
+    if (!isoString) return { label: '—', stale: false };
+    const ms = Date.now() - new Date(isoString).getTime();
+    const stale = ms > 300000; // > 5 min es stale
+    if (ms < 60000)  return { label: 'hace <1 min',                stale };
+    const m = Math.floor(ms / 60000);
+    if (m < 60)      return { label: `hace ${m} min`,              stale };
+    const h = Math.floor(m / 60);
+    return             { label: `hace ${h}h ${m % 60}m`,           stale };
+  }
+
   function renderPbxUI() {
-    if (!pbxExtensionsData || pbxExtensionsData.length === 0) return;
+    if (!pbxExtensionsData || pbxExtensionsData.length === 0) {
+      document.getElementById('pbx-table-container').innerHTML = `
+        <div class="loading" style="flex-direction:column; gap:8px; padding:40px 20px;">
+          <div class="spinner"></div>
+          <span style="font-size:13px; color:var(--text-dark);">El bridge está inicializando o sin datos todavía.<br>Si persiste, verifica el servicio Windows.</span>
+        </div>`;
+      return;
+    }
 
-    // Calcular contadores de PBX
-    const idleCount = pbxExtensionsData.filter(e => e.estado === '🟢 Idle').length;
-    const busyCount = pbxExtensionsData.filter(e => e.estado === '🟠 En llamada' || e.estado === '🔵 Timbrando' || e.estado === '🟡 En espera').length;
-    const unavCount = pbxExtensionsData.filter(e => e.estado === '🔴 Unavailable' || e.estado === '⚪ Desconocido').length;
+    updateBridgeBadge(pbxExtensionsData);
 
-    // El número de llamadas en espera viene del snapshot
+    // Contadores
+    const idleCount    = pbxExtensionsData.filter(e => e.estado === '🟢 Idle').length;
+    const busyCount    = pbxExtensionsData.filter(e => ['🟠 En llamada','🔵 Timbrando','🟡 En espera'].includes(e.estado)).length;
+    const unavCount    = pbxExtensionsData.filter(e => ['🔴 Unavailable','⚪ Desconocido'].includes(e.estado)).length;
     const waitingCount = pbxSnapshotData ? pbxSnapshotData.en_espera : 0;
 
-    // Actualizar Tab PBX Cards
-    animateValue(document.getElementById('pbx-count-idle'), idleCount);
-    animateValue(document.getElementById('pbx-count-busy'), busyCount);
+    // Cards Tab PBX
+    animateValue(document.getElementById('pbx-count-idle'),        idleCount);
+    animateValue(document.getElementById('pbx-count-busy'),        busyCount);
     animateValue(document.getElementById('pbx-count-unavailable'), unavCount);
-    animateValue(document.getElementById('pbx-count-waiting'), waitingCount);
+    animateValue(document.getElementById('pbx-count-waiting'),     waitingCount);
 
-    // Actualizar Dashboard Central Cards (Fila PBX)
-    const centralPbxOnline = document.getElementById('central-pbx-online');
-    const centralPbxBusy = document.getElementById('central-pbx-busy');
+    // Waiting card — pulso de alerta si hay llamadas en espera
+    const waitingCard = document.getElementById('pbx-waiting-card');
+    if (waitingCard) waitingCard.classList.toggle('waiting-alert', waitingCount > 0);
+
+    // Cards Dashboard Central
+    const centralPbxOnline  = document.getElementById('central-pbx-online');
+    const centralPbxBusy    = document.getElementById('central-pbx-busy');
     const centralPbxWaiting = document.getElementById('central-pbx-waiting');
     const centralPbxOffline = document.getElementById('central-pbx-offline');
-
-    if (centralPbxOnline) animateValue(centralPbxOnline, idleCount);
-    if (centralPbxBusy) animateValue(centralPbxBusy, busyCount);
+    if (centralPbxOnline)  animateValue(centralPbxOnline,  idleCount);
+    if (centralPbxBusy)    animateValue(centralPbxBusy,    busyCount);
     if (centralPbxWaiting) animateValue(centralPbxWaiting, waitingCount);
     if (centralPbxOffline) animateValue(centralPbxOffline, unavCount);
 
-    // Aplicar Filtros PBX
+    // Alerta visual en tarjeta central de espera
+    const centralWaitCard = document.getElementById('central-pbx-waiting')?.closest('.central-card');
+    if (centralWaitCard) centralWaitCard.classList.toggle('waiting-alert', waitingCount > 0);
+
+    // Filtro y orden
     let lista = pbxExtensionsData.filter(ext => {
-      if (activePbxFilter === 'online') return ext.estado === '🟢 Idle';
-      if (activePbxFilter === 'busy') return ['🟠 En llamada', '🔵 Timbrando', '🟡 En espera'].includes(ext.estado);
-      if (activePbxFilter === 'offline') return ['🔴 Unavailable', '⚪ Desconocido'].includes(ext.estado);
+      if (activePbxFilter === 'online')  return ext.estado === '🟢 Idle';
+      if (activePbxFilter === 'busy')    return ['🟠 En llamada','🔵 Timbrando','🟡 En espera'].includes(ext.estado);
+      if (activePbxFilter === 'offline') return ['🔴 Unavailable','⚪ Desconocido'].includes(ext.estado);
       return true;
     });
 
-    // Aplicar Ordenamiento PBX
     const dir = pbxSortDir[activePbxSort] ?? 1;
     lista = [...lista].sort((a, b) => {
       if (activePbxSort === 'nombre') return dir * a.nombre.localeCompare(b.nombre, 'es');
-      if (activePbxSort === 'ext') return dir * (parseInt(a.ext) - parseInt(b.ext));
+      if (activePbxSort === 'ext')    return dir * (parseInt(a.ext) - parseInt(b.ext));
       if (activePbxSort === 'estado') {
         const pA = PBX_ESTADO_PRIORITY[a.estado] || 99;
         const pB = PBX_ESTADO_PRIORITY[b.estado] || 99;
         if (pA !== pB) return dir * (pA - pB);
-        return a.nombre.localeCompare(b.nombre, 'es'); // Desempate por nombre
+        return a.nombre.localeCompare(b.nombre, 'es');
       }
       return 0;
     });
 
-    document.getElementById('pbx-total-badge').textContent = activePbxFilter === 'all' ? `${pbxExtensionsData.length} extensiones` : `${lista.length} / ${pbxExtensionsData.length} extensiones`;
+    document.getElementById('pbx-total-badge').textContent =
+      activePbxFilter === 'all'
+        ? `${pbxExtensionsData.length} extensiones`
+        : `${lista.length} / ${pbxExtensionsData.length} extensiones`;
 
-    // Renderizar tabla de agentes PBX
     const rows = lista.map(ext => {
       const pill = getPbxStatusPill(ext.estado);
-      const updatedTime = new Date(ext.updated_at).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const { label: ageLabel, stale } = relativeTime(ext.updated_at);
+      const ageClass = stale ? 'pbx-age stale' : 'pbx-age';
+      const extTooltip = `title="Ext. ${ext.ext}"`;
 
       return `
         <tr class="agent-row">
-          <td style="font-family: monospace; font-weight: 700; color: var(--text-muted);">${ext.ext}</td>
-          <td class="agent-name">${ext.nombre}</td>
+          <td class="agent-name" ${extTooltip} style="cursor:default;">${ext.nombre}
+            <span style="font-size:11px; color:var(--text-dark); font-family:monospace; margin-left:6px;">${ext.ext}</span>
+          </td>
           <td>${pill}</td>
-          <td style="color: var(--text-dark); font-size: 12px;">Actualizado: ${updatedTime}</td>
+          <td><span class="${ageClass}">${ageLabel}</span></td>
         </tr>
       `;
-    }).join('') || `<tr><td colspan="4" style="padding:28px;text-align:center;color:var(--text-dark);">Sin extensiones</td></tr>`;
+    }).join('') || `<tr><td colspan="3" style="padding:28px;text-align:center;color:var(--text-dark);">Sin extensiones con el filtro activo</td></tr>`;
 
     document.getElementById('pbx-table-container').innerHTML = `
       <table>
         <thead>
           <tr>
-            <th>EXT</th>
             <th>Agente</th>
             <th>Estado VoIP</th>
-            <th>Última Actividad</th>
+            <th>Último cambio</th>
           </tr>
         </thead>
-        <tbody>
-          ${rows}
-        </tbody>
+        <tbody>${rows}</tbody>
       </table>
     `;
   }
@@ -2650,15 +2756,10 @@
     countdown = 10;
     updateTimerUI();
 
-    // Cargar datos de Chatwoot (Para Tab Agentes y Central)
-    await Promise.all([fetchConversations(), fetchAgents()]);
+    // Chatwoot + PBX siempre (PBX alimenta también el Dashboard Central)
+    await Promise.all([fetchConversations(), fetchAgents(), fetchPbxData()]);
 
-    // Cargar datos de PBX (Para Tab PBX y Central)
-    if (currentTab === 'pbx' || currentTab === 'central') {
-      await fetchPbxData();
-    }
-
-    // Cargar datos de OPS (Para Tab OPS y Central)
+    // OPS solo si el tab activo lo requiere (es la más pesada)
     if (currentTab === 'ops' || currentTab === 'central') {
       await fetchOpsData();
     }
