@@ -646,12 +646,16 @@
     font-size: 12px; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap;
   }
 
-  .status-pill.online  { background: var(--green-card); color: var(--green-text); border: 1px solid var(--green-border); }
-  .status-pill.offline { background: var(--red-card); color: var(--red-text); border: 1px solid var(--red-border); }
+  .status-pill.online, .status-pill.idle { background: var(--green-card); color: var(--green-text); border: 1px solid var(--green-border); }
+  .status-pill.offline, .status-pill.unavailable { background: var(--red-card); color: var(--red-text); border: 1px solid var(--red-border); }
+  .status-pill.llamada { background: var(--amber-bg); color: var(--amber-text); border: 1px solid var(--amber-border); }
+  .status-pill.timbrando { background: var(--blue-bg); color: var(--blue-text); border: 1px solid var(--blue-border); }
 
   .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .status-dot.green { background: var(--green-text); box-shadow: 0 0 6px rgba(74, 222, 128, 0.6); animation: pulse 2s infinite; }
   .status-dot.red   { background: var(--red-text); }
+  .status-dot.amber { background: var(--amber-text); box-shadow: 0 0 6px rgba(251, 191, 36, 0.6); animation: pulse 2s infinite; }
+  .status-dot.blue  { background: var(--blue-text); box-shadow: 0 0 6px rgba(96, 165, 250, 0.6); animation: pulse 1s infinite; }
 
   /* Badge de chats asignados al agente */
   .chat-badge {
@@ -1308,6 +1312,7 @@
   <div class="tabs-container">
     <button class="tab-btn active" data-tab="central" onclick="switchTab('central')">🏠 Dashboard Central</button>
     <button class="tab-btn" data-tab="agentes" onclick="switchTab('agentes')">👥 Agentes (Chatwoot)</button>
+    <button class="tab-btn" data-tab="pbx" onclick="switchTab('pbx')">📞 PBX (Telefonía)</button>
     <button class="tab-btn" data-tab="ops" onclick="switchTab('ops')">🎫 Casos (OPS)</button>
   </div>
 
@@ -1329,7 +1334,7 @@
     <div>
       <h2 style="font-size: 24px; color: var(--text-title); margin-bottom: 8px;">Centro de Monitoreo</h2>
       <p style="color: var(--text-muted); font-size: 14px; max-width: 600px;">
-        Vista consolidada de la operación en tiempo real. Usa las pestañas superiores para profundizar en los detalles de los Agentes o los Tickets de OPS.
+        Vista consolidada de la operación en tiempo real. Usa las pestañas superiores para profundizar en los detalles de los Agentes, PBX o los Tickets de OPS.
       </p>
     </div>
 
@@ -1356,7 +1361,6 @@
 
   <h3 style="margin-top: 32px; margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 1.5px;">Métricas de Chatwoot</h3>
   <div class="central-grid">
-    <!-- Card: Agentes Online -->
     <div class="central-card glass-panel" style="border-bottom: 4px solid var(--green-text);">
       <div class="central-icon green">🟢</div>
       <div class="central-info">
@@ -1364,8 +1368,6 @@
         <div class="central-value green" id="central-count-online">—</div>
       </div>
     </div>
-
-    <!-- Card: Total Chats -->
     <div class="central-card glass-panel" style="border-bottom: 4px solid var(--purple-text);">
       <div class="central-icon purple">💬</div>
       <div class="central-info">
@@ -1373,8 +1375,6 @@
         <div class="central-value purple" id="central-chat-total">—</div>
       </div>
     </div>
-
-    <!-- Card: Chats Asignados -->
     <div class="central-card glass-panel" style="border-bottom: 4px solid var(--teal-text);">
       <div class="central-icon teal">✅</div>
       <div class="central-info">
@@ -1382,8 +1382,6 @@
         <div class="central-value teal" id="central-chat-assigned">—</div>
       </div>
     </div>
-
-    <!-- Card: Chats Sin Asignar -->
     <div class="central-card glass-panel" style="border-bottom: 4px solid var(--amber-text);">
       <div class="central-icon amber">⏳</div>
       <div class="central-info">
@@ -1393,9 +1391,41 @@
     </div>
   </div>
 
+  <!-- NUEVA FILA DE MÉTRICAS PBX -->
+  <h3 style="margin-top: 36px; margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 1.5px;">Telefonía PBX (Cola 6500)</h3>
+  <div class="central-grid">
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--green-text);">
+      <div class="central-icon green" style="background: var(--green-card);">🟢</div>
+      <div class="central-info">
+        <div class="central-label">Agentes Disponibles</div>
+        <div class="central-value green" id="central-pbx-online">—</div>
+      </div>
+    </div>
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--amber-text);">
+      <div class="central-icon amber" style="background: var(--amber-bg);">📞</div>
+      <div class="central-info">
+        <div class="central-label">En Llamada</div>
+        <div class="central-value amber" id="central-pbx-busy">—</div>
+      </div>
+    </div>
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--red-text);">
+      <div class="central-icon red" style="background: var(--red-bg);">⏳</div>
+      <div class="central-info">
+        <div class="central-label">Llamadas en Espera</div>
+        <div class="central-value red" id="central-pbx-waiting">—</div>
+      </div>
+    </div>
+    <div class="central-card glass-panel" style="border-bottom: 4px solid var(--text-dark);">
+      <div class="central-icon" style="background: var(--bg-hover);">🔴</div>
+      <div class="central-info">
+        <div class="central-label">No Disponibles</div>
+        <div class="central-value" style="color: var(--text-main);" id="central-pbx-offline">—</div>
+      </div>
+    </div>
+  </div>
+
   <h3 style="margin-top: 36px; margin-bottom: 8px; font-size: 15px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 1.5px;">Casos Corporativos (OPS)</h3>
   <div class="central-grid">
-    <!-- Card: OPS Abiertos -->
     <div class="central-card glass-panel" style="border-bottom: 4px solid var(--green-text);">
       <div class="central-icon green" style="background: var(--green-card);">🟢</div>
       <div class="central-info">
@@ -1403,8 +1433,6 @@
         <div class="central-value green" id="central-ops-count-0">—</div>
       </div>
     </div>
-
-    <!-- Card: OPS En Proceso -->
     <div class="central-card glass-panel" style="border-bottom: 4px solid var(--blue-text);">
       <div class="central-icon blue" style="background: var(--blue-card);">🔵</div>
       <div class="central-info">
@@ -1412,8 +1440,6 @@
         <div class="central-value blue" id="central-ops-count-1">—</div>
       </div>
     </div>
-
-    <!-- Card: OPS Pendientes -->
     <div class="central-card glass-panel" style="border-bottom: 4px solid var(--amber-text);">
       <div class="central-icon amber" style="background: var(--amber-bg);">🟠</div>
       <div class="central-info">
@@ -1421,8 +1447,6 @@
         <div class="central-value amber" id="central-ops-count-2">—</div>
       </div>
     </div>
-
-    <!-- Card: OPS Demanda -->
     <div class="central-card glass-panel" style="border-bottom: 4px solid var(--red-text);">
       <div class="central-icon red" style="background: var(--red-card);">🔴</div>
       <div class="central-info">
@@ -1573,7 +1597,7 @@
     <!-- Agentes en llamadas -->
     <div class="raw-header" style="margin-bottom:12px;">
       <div class="raw-title-row">
-        <span style="font-size:15px; font-weight:600; color:var(--text-title);">📞 Agentes en llamadas</span>
+        <span style="font-size:15px; font-weight:600; color:var(--text-title);">📞 Agentes en llamadas (Manual)</span>
         <span class="badge" id="llamadas-count-badge">0 marcados</span>
       </div>
       <button class="raw-toggle-btn" onclick="toggleLlamadas()" id="llamadas-toggle">Mostrar</button>
@@ -1637,7 +1661,91 @@
 </div>
 
 <!-- ==========================================
-     PESTAÑA 2: CASOS CORPORATIVOS (OPS)
+     PESTAÑA NUEVA: PBX (TELEFONÍA)
+=========================================== -->
+<div id="tab-pbx" class="tab-content">
+  <div class="chat-counters ops-4col">
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon green">🟢</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">Agentes Disponibles</div>
+        <div class="chat-card-value green" id="pbx-count-idle">—</div>
+      </div>
+    </div>
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon amber">📞</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">En Llamada</div>
+        <div class="chat-card-value amber" id="pbx-count-busy">—</div>
+      </div>
+    </div>
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon red">⏳</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">Llamadas en Espera</div>
+        <div class="chat-card-value red" id="pbx-count-waiting">—</div>
+      </div>
+    </div>
+    <div class="chat-card glass-panel">
+      <div class="chat-card-icon" style="background: var(--bg-hover);">🔴</div>
+      <div class="chat-card-info">
+        <div class="chat-card-label">No Disponibles</div>
+        <div class="chat-card-value" style="color: var(--text-main);" id="pbx-count-unavailable">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap glass-panel" style="background: transparent; border: none; box-shadow: none;">
+    <div class="table-header" style="justify-content: flex-end; background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 12px; margin-bottom: 16px;">
+      <!-- Temporizador Visual Clonado para PBX -->
+      <div class="refresh-indicator">
+        <span>Próxima act.</span>
+        <div class="circular-timer">
+          <svg viewBox="0 0 36 36">
+            <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path class="progress" id="pbx-refresh-circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <div class="time" id="pbx-refresh-time">10</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap glass-panel">
+      <div class="table-header">
+        <div class="table-header-left">
+          <span class="table-title">Estado de Extensiones (Cola 6500)</span>
+          <span class="badge" id="pbx-total-badge">— extensiones</span>
+        </div>
+      </div>
+
+      <!-- BARRA DE FILTROS PBX -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <button class="filter-chip active" data-pbx-filter="all" onclick="setPbxFilter('all')">Todos</button>
+          <button class="filter-chip" data-pbx-filter="online" onclick="setPbxFilter('online')">🟢 Libres</button>
+          <button class="filter-chip" data-pbx-filter="busy" onclick="setPbxFilter('busy')">🟠 Ocupados</button>
+          <button class="filter-chip" data-pbx-filter="offline" onclick="setPbxFilter('offline')">🔴 No Disp.</button>
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-group">
+          <button class="filter-chip sort-chip active" data-pbx-sort="estado" onclick="setPbxSort('estado')">Estado</button>
+          <button class="filter-chip sort-chip" data-pbx-sort="nombre" onclick="setPbxSort('nombre')">A–Z</button>
+          <button class="filter-chip sort-chip" data-pbx-sort="ext" onclick="setPbxSort('ext')">Extensión</button>
+        </div>
+      </div>
+
+      <div id="pbx-table-container">
+        <div class="loading">
+          <div class="spinner"></div>
+          Cargando telemetría de la PBX...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     PESTAÑA 3: CASOS CORPORATIVOS (OPS)
 =========================================== -->
 <div id="tab-ops" class="tab-content">
   <div class="chat-counters ops-4col">
@@ -1746,6 +1854,7 @@
     currentTab = tab;
     document.getElementById('tab-central').classList.toggle('active', tab === 'central');
     document.getElementById('tab-agentes').classList.toggle('active', tab === 'agentes');
+    document.getElementById('tab-pbx').classList.toggle('active', tab === 'pbx');
     document.getElementById('tab-ops').classList.toggle('active', tab === 'ops');
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1753,6 +1862,7 @@
     });
 
     if (tab === 'ops') fetchOpsData(); // Cargar datos inmediatamente al abrir la pestaña
+    if (tab === 'pbx') fetchPbxData();
     if (tab === 'central') fetchAll(); // Refrescar los datos principales si el usuario vuelve a inicio
   }
 
@@ -1923,6 +2033,22 @@
   let eventHistory    = [];
   let unassignedSince = null;
   const UNASSIGNED_ALERT_MINS = 15;
+
+  // Variables para la PBX y Filtros
+  let pbxExtensionsData = [];
+  let pbxSnapshotData = null;
+  let activePbxFilter = 'all';
+  let activePbxSort = 'estado';
+  let pbxSortDir = {};
+
+  const PBX_ESTADO_PRIORITY = {
+      '🟢 Idle': 1,
+      '🔵 Timbrando': 2,
+      '🟠 En llamada': 3,
+      '🟡 En espera': 4,
+      '🔴 Unavailable': 5,
+      '⚪ Desconocido': 6
+  };
 
   function clock() {
     const now = new Date();
@@ -2229,7 +2355,7 @@
     renderTable();
   }
 
-  /* ── Lógica de la nueva pestaña OPS (Tickets) ─────────────*/
+  /* ── Lógica de la Pestaña OPS (Tickets) ─────────────*/
   const opsFiltersConfig = [
     { name: "Abiertos (G4)", query: "state_id:2 AND group_id:4", id: 2, icon: '🟢', color: 'green' },
     { name: "En Proceso (G4)", query: "state_id:7 AND group_id:4", id: 7, icon: '🔵', color: 'blue' },
@@ -2354,6 +2480,141 @@
     `;
   }
 
+  /* ── Lógica de la Pestaña PBX (Telefonía) ─────────────*/
+  function getPbxStatusPill(estado) {
+    if (estado === '🟢 Idle') return `<span class="status-pill idle"><span class="status-dot green"></span>Libre</span>`;
+    if (estado === '🟠 En llamada') return `<span class="status-pill llamada"><span class="status-dot amber"></span>En Llamada</span>`;
+    if (estado === '🔵 Timbrando') return `<span class="status-pill timbrando"><span class="status-dot blue"></span>Timbrando</span>`;
+    if (estado === '🟡 En espera') return `<span class="status-pill llamada"><span class="status-dot amber"></span>En Espera</span>`;
+    // Para Unavailable o Desconocido
+    return `<span class="status-pill unavailable"><span class="status-dot red"></span>No Disponible</span>`;
+  }
+
+  function setPbxFilter(f) {
+    activePbxFilter = f;
+    document.querySelectorAll('.filter-chip[data-pbx-filter]').forEach(btn => btn.classList.toggle('active', btn.dataset.pbxFilter === f));
+    renderPbxUI();
+  }
+
+  function setPbxSort(s) {
+    if (activePbxSort === s) { pbxSortDir[s] = (pbxSortDir[s] ?? 1) * -1; }
+    else { activePbxSort = s; if (pbxSortDir[s] === undefined) pbxSortDir[s] = 1; }
+    const labels = { estado: 'Estado', nombre: 'A–Z', ext: 'Extensión' };
+    document.querySelectorAll('.sort-chip[data-pbx-sort]').forEach(btn => {
+      const isActive = btn.dataset.pbxSort === activePbxSort;
+      btn.classList.toggle('active', isActive);
+      btn.innerHTML = isActive ? `${labels[btn.dataset.pbxSort]}<span class="sort-dir"> ${pbxSortDir[activePbxSort] === 1 ? '↑' : '↓'}</span>` : labels[btn.dataset.pbxSort];
+    });
+    renderPbxUI();
+  }
+
+  async function fetchPbxData() {
+    try {
+      const [extRes, snapRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/pbx_extensions?select=*&order=ext.asc`, { headers: HEADERS }),
+        fetch(`${SUPABASE_URL}/rest/v1/pbx_queue_snapshots?select=*&order=ts.desc&limit=1`, { headers: HEADERS })
+      ]);
+
+      if (extRes.ok) pbxExtensionsData = await extRes.json();
+      if (snapRes.ok) {
+        const snaps = await snapRes.json();
+        pbxSnapshotData = snaps.length > 0 ? snaps[0] : null;
+      }
+
+      renderPbxUI();
+    } catch (err) {
+      console.error("Error cargando telemetría PBX:", err);
+      document.getElementById('pbx-table-container').innerHTML = `
+        <div class="error" style="background: var(--red-card); border-radius: 12px; padding: 20px;">
+          ⚠️ No se pudo conectar a la base de datos de la PBX. Verifica la conexión a internet o el status de Supabase.
+        </div>`;
+    }
+  }
+
+  function renderPbxUI() {
+    if (!pbxExtensionsData || pbxExtensionsData.length === 0) return;
+
+    // Calcular contadores de PBX
+    const idleCount = pbxExtensionsData.filter(e => e.estado === '🟢 Idle').length;
+    const busyCount = pbxExtensionsData.filter(e => e.estado === '🟠 En llamada' || e.estado === '🔵 Timbrando' || e.estado === '🟡 En espera').length;
+    const unavCount = pbxExtensionsData.filter(e => e.estado === '🔴 Unavailable' || e.estado === '⚪ Desconocido').length;
+
+    // El número de llamadas en espera viene del snapshot
+    const waitingCount = pbxSnapshotData ? pbxSnapshotData.en_espera : 0;
+
+    // Actualizar Tab PBX Cards
+    animateValue(document.getElementById('pbx-count-idle'), idleCount);
+    animateValue(document.getElementById('pbx-count-busy'), busyCount);
+    animateValue(document.getElementById('pbx-count-unavailable'), unavCount);
+    animateValue(document.getElementById('pbx-count-waiting'), waitingCount);
+
+    // Actualizar Dashboard Central Cards (Fila PBX)
+    const centralPbxOnline = document.getElementById('central-pbx-online');
+    const centralPbxBusy = document.getElementById('central-pbx-busy');
+    const centralPbxWaiting = document.getElementById('central-pbx-waiting');
+    const centralPbxOffline = document.getElementById('central-pbx-offline');
+
+    if (centralPbxOnline) animateValue(centralPbxOnline, idleCount);
+    if (centralPbxBusy) animateValue(centralPbxBusy, busyCount);
+    if (centralPbxWaiting) animateValue(centralPbxWaiting, waitingCount);
+    if (centralPbxOffline) animateValue(centralPbxOffline, unavCount);
+
+    // Aplicar Filtros PBX
+    let lista = pbxExtensionsData.filter(ext => {
+      if (activePbxFilter === 'online') return ext.estado === '🟢 Idle';
+      if (activePbxFilter === 'busy') return ['🟠 En llamada', '🔵 Timbrando', '🟡 En espera'].includes(ext.estado);
+      if (activePbxFilter === 'offline') return ['🔴 Unavailable', '⚪ Desconocido'].includes(ext.estado);
+      return true;
+    });
+
+    // Aplicar Ordenamiento PBX
+    const dir = pbxSortDir[activePbxSort] ?? 1;
+    lista = [...lista].sort((a, b) => {
+      if (activePbxSort === 'nombre') return dir * a.nombre.localeCompare(b.nombre, 'es');
+      if (activePbxSort === 'ext') return dir * (parseInt(a.ext) - parseInt(b.ext));
+      if (activePbxSort === 'estado') {
+        const pA = PBX_ESTADO_PRIORITY[a.estado] || 99;
+        const pB = PBX_ESTADO_PRIORITY[b.estado] || 99;
+        if (pA !== pB) return dir * (pA - pB);
+        return a.nombre.localeCompare(b.nombre, 'es'); // Desempate por nombre
+      }
+      return 0;
+    });
+
+    document.getElementById('pbx-total-badge').textContent = activePbxFilter === 'all' ? `${pbxExtensionsData.length} extensiones` : `${lista.length} / ${pbxExtensionsData.length} extensiones`;
+
+    // Renderizar tabla de agentes PBX
+    const rows = lista.map(ext => {
+      const pill = getPbxStatusPill(ext.estado);
+      const updatedTime = new Date(ext.updated_at).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      return `
+        <tr class="agent-row">
+          <td style="font-family: monospace; font-weight: 700; color: var(--text-muted);">${ext.ext}</td>
+          <td class="agent-name">${ext.nombre}</td>
+          <td>${pill}</td>
+          <td style="color: var(--text-dark); font-size: 12px;">Actualizado: ${updatedTime}</td>
+        </tr>
+      `;
+    }).join('') || `<tr><td colspan="4" style="padding:28px;text-align:center;color:var(--text-dark);">Sin extensiones</td></tr>`;
+
+    document.getElementById('pbx-table-container').innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>EXT</th>
+            <th>Agente</th>
+            <th>Estado VoIP</th>
+            <th>Última Actividad</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    `;
+  }
+
   /* ── Lógica del Temporizador Circular Sincronizado ────────*/
   let countdown = 10;
   let countdownInterval;
@@ -2363,16 +2624,19 @@
     const circle = document.getElementById('refresh-circle');
     const opsTimeEl = document.getElementById('ops-refresh-time');
     const opsCircle = document.getElementById('ops-refresh-circle');
+    const pbxTimeEl = document.getElementById('pbx-refresh-time');
+    const pbxCircle = document.getElementById('pbx-refresh-circle');
     const centralTimeEl = document.getElementById('central-refresh-time');
     const centralCircle = document.getElementById('central-refresh-circle');
 
     if(timeEl) timeEl.textContent = countdown;
     if(opsTimeEl) opsTimeEl.textContent = countdown;
+    if(pbxTimeEl) pbxTimeEl.textContent = countdown;
     if(centralTimeEl) centralTimeEl.textContent = countdown;
 
     const pct = (countdown / 10) * 100;
 
-    [circle, opsCircle, centralCircle].forEach(circ => {
+    [circle, opsCircle, pbxCircle, centralCircle].forEach(circ => {
       if(circ) {
         circ.style.strokeDasharray = `${pct}, 100`;
         if (countdown <= 3) circ.style.stroke = 'var(--red-text)';
@@ -2386,10 +2650,15 @@
     countdown = 10;
     updateTimerUI();
 
-    // Siempre cargar datos de Chatwoot (para Tab Agentes y Tab Central)
+    // Cargar datos de Chatwoot (Para Tab Agentes y Central)
     await Promise.all([fetchConversations(), fetchAgents()]);
 
-    // Cargar datos de OPS solo si estamos en Tab OPS o Tab Central
+    // Cargar datos de PBX (Para Tab PBX y Central)
+    if (currentTab === 'pbx' || currentTab === 'central') {
+      await fetchPbxData();
+    }
+
+    // Cargar datos de OPS (Para Tab OPS y Central)
     if (currentTab === 'ops' || currentTab === 'central') {
       await fetchOpsData();
     }
